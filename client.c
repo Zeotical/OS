@@ -6,6 +6,9 @@
 //#include <cstring>
 //#include <cstdlib>
 //using namespace std;
+
+#include<stdbool.h> // header file to use bool variables in C. else would use 1 or ;;.
+
 const long MAX_MSG_SIZE = 256; // Must match sender's size
 // Define the data structure for the message (must be identical)
 struct Message {
@@ -33,7 +36,7 @@ printf ("[RECEIVER] Child Process (PID: " );
 printf( "%c" , getpid()) ;
 printf ( ") connected to message queue." );
 // 2. Continuously receive messages until termination signal (-1)
-while (1) {
+while (true) {
 // Receive the message. It blocks until a message is available.
 ssize_t bytes_read = mq_receive(mqd, (char*)&msg, MAX_MSG_SIZE, NULL);
 if (bytes_read == -1) {
