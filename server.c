@@ -3,9 +3,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <cstring>
-#include <cstdlib>
+// #include <cstring>
+// #include <cstdlib>
 //using namespace std;
+
+#include <string.h>
+#include <stdlib.h>
+
 // Define constants for the message queue
 const char* MQ_NAME = "/my_ipc_mq";
 const long MAX_MSG_SIZE = 256;
@@ -17,20 +21,20 @@ int counter;
 char buffer[252]; // Max size is 256, leaving 4 bytes for the int
 };
 void run_sender(mqd_t mqd, pid_t receiver_pid) {
-cout << "\n[SENDER] Parent Process (PID: " << getpid() << ") started." << endl;
-cout << "[SENDER] Sending 3 messages to Child (PID: " << receiver_pid << ") via Queue..." << endl;
-Message msg;
+printf("\n[SENDER] Parent Process (PID: %c started.",  getpid());
+printf("[SENDER] Sending 3 messages to Child (PID: %c via Queue...", receiver_pid);
+struct Message msg;
 for (int i = 1; i <= 3; ++i) {
 // 1. Prepare the message
 msg.counter = i;
-string full_msg_str = MESSAGE_PREFIX + to_string(i);
-strncpy(msg.buffer, full_msg_str.c_str(), sizeof(msg.buffer) - 1);
+char full_msg_str[] = MESSAGE_PREFIX + to_string(i);
+strncpy(msg.buffer, full_msg_str, sizeof(msg.buffer) - 1);
 msg.buffer[sizeof(msg.buffer) - 1] = '\0';
 // 2. Send the message
 if (mq_send(mqd, (const char*)&msg, sizeof(msg), 0) == -1) {
 perror("[SENDER] mq_send failed");
 } else {
-cout << "[SENDER] Sent message " << i << ". Pausing..." << endl;
+printf ("[SENDER] Sent message %d. Pausing...", i);
 }
 sleep(2);
 }
@@ -39,7 +43,7 @@ msg.counter = -1;
 if (mq_send(mqd, (const char*)&msg, sizeof(msg), 0) == -1) {
 perror("[SENDER] mq_send failed for termination signal");
 } else {
-cout << "[SENDER] Sent termination signal (-1). Waiting for receiver..." << endl;
+printf("[SENDER] Sent termination signal (-1). Waiting for receiver...");
 }
 }
 int main() {
@@ -79,7 +83,7 @@ wait(NULL);
 // Cleanup: Close and unlink the message queue
 mq_close(mqd);
 mq_unlink(MQ_NAME);
-cout << "\n[SENDER] Parent finished and cleaned up message queue." << endl;
+printf("\n[SENDER] Parent finished and cleaned up message queue.");
 }
 return 0;
 }

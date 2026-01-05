@@ -17,8 +17,8 @@ char buffer[252];
 };
 int main(int argc, char* argv[]) {
 if (argc != 2) {
-    char* c = argv[0];
-fprintf(stderr ,"Usage: %c <MQ_NAME>" , *c);
+    //char* c = argv[0];
+fprintf(stderr ,"Usage: %c <MQ_NAME>" , argv[0]);
 return 1;
 }
 const char* MQ_NAME = argv[1];
