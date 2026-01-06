@@ -6,6 +6,11 @@
 
 #include<stdbool.h> // header file to use bool variables in C. else would use 1 or ;;.
 
+#include <arpa/inet.h>
+#include <string.h>
+#include <sys/socket.h>
+#define PORT 8080
+
 const long MAX_MSG_SIZE = 256; // Must match sender's size
 // Define the data structure for the message (must be identical)
 struct Message {
@@ -15,25 +20,28 @@ char buffer[252];
 int main(int argc, char* argv[]) {
 
 // Socket Code provided by Mr Sharaf
-// TO DO fix this connect to server make server listen 4 connections
-// int sock = 0;
-// struct sockaddr_in serv_addr;
-// ClientState state;
-// char buffer [256] = {0};
-// if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-// printf("Socket creation error\n");
-// return -1; 
-// }
-// serv_addr.sin_family = AF_INET;
-// serv_addr.sin_port = htons (PORT);
-// if (inet_pton (AF_INEТ, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
-// printf("Invalid address\n");
-// return -1; 
-// }
-// if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
-// printf("Connection failed\n");
-// return -1;
-// }
+// TODO is server listening to connections? fork child for each connection
+int sock = 0;
+struct sockaddr_in serv_addr;
+//ClientState state;
+char buffer [256] = {0};
+if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+printf("Socket creation error\n");
+return -1; 
+}
+serv_addr.sin_family = AF_INET;
+serv_addr.sin_port = htons (PORT);
+if (inet_pton (AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+printf("Invalid address\n");
+return -1; 
+}
+if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
+printf("Connection failed\n");
+return -1;
+}
+else{
+  printf("Connection established\n");  
+}
 
 if (argc != 2) {
     //char* c = argv[0];
