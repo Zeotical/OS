@@ -28,30 +28,30 @@ struct Message msg;
 // Note: We don't need the attributes struct here, as we are not creating it.
 mqd = mq_open(MQ_NAME, O_RDONLY);
 if (mqd == (mqd_t)-1) {
-perror("[RECEIVER] mq_open failed");
+perror("\n[RECEIVER] mq_open failed");
 return 1;
 }
-printf ("[RECEIVER] Child Process (PID: " );
+printf ("\n[RECEIVER] Child Process (PID: %d) connected to message queue." , getpid()) ;
 //int pid = getpid();
-printf( "%c" , getpid()) ;
-printf ( ") connected to message queue." );
+//printf( "\n%d) connected to message queue." , getpid()) ;
+//printf ( ") connected to message queue." );
 // 2. Continuously receive messages until termination signal (-1)
 while (true) {
 // Receive the message. It blocks until a message is available.
 ssize_t bytes_read = mq_receive(mqd, (char*)&msg, MAX_MSG_SIZE, NULL);
 if (bytes_read == -1) {
-perror("[RECEIVER] mq_receive failed");
+perror("\n[RECEIVER] mq_receive failed");
 break;
 }
 if (msg.counter == -1) {
-printf ("[RECEIVER] Received termination signal. Exiting." ) ;
+printf ("\n[RECEIVER] Received termination signal. Exiting." ) ;
 break;
 }
-printf( "[RECEIVER] Received Counter: " );
+printf( "\n[RECEIVER] Received Counter: %d  | Message: %s", msg.counter, msg.buffer);
 // int msg_counter = msg.counter;
-printf ( "%c", msg.counter) ;
-printf(" | Message: ");
-printf (msg.buffer );
+//printf ( "%d", msg.counter) ;
+// printf(" | Message: ");
+// printf (msg.buffer );
 }
 // Cleanup: Close the message queue descriptor
 mq_close(mqd);

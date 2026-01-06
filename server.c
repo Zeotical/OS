@@ -21,29 +21,37 @@ int counter;
 char buffer[252]; // Max size is 256, leaving 4 bytes for the int
 };
 void run_sender(mqd_t mqd, pid_t receiver_pid) {
-printf("\n[SENDER] Parent Process (PID: %c started.",  getpid());
-printf("[SENDER] Sending 3 messages to Child (PID: %c via Queue...", receiver_pid);
+printf("\n[SENDER] Parent Process (PID: %d) started.",  getpid());
+printf("\n[SENDER] Sending 3 messages to Child (PID: %d) via Queue...", receiver_pid);
 struct Message msg;
 for (int i = 1; i <= 3; ++i) {
 // 1. Prepare the message
 msg.counter = i;
-char full_msg_str[] = MESSAGE_PREFIX + to_string(i);
+char str[20]; // Buffer to hold the string
+sprintf(str, "%d", i); // Converts int to string
+// strcat(MESSAGE_PREFIX, str) ;
+// char full_msg_str[] = {MESSAGE_PREFIX};
+// strncpy(msg.buffer, full_msg_str, sizeof(msg.buffer) - 1);
+//char iTostr = i;
+const char* full_msg_str = MESSAGE_PREFIX ;
 strncpy(msg.buffer, full_msg_str, sizeof(msg.buffer) - 1);
+strncpy(msg.buffer+ strlen(msg.buffer), str, strlen(str)+1);
+
 msg.buffer[sizeof(msg.buffer) - 1] = '\0';
 // 2. Send the message
 if (mq_send(mqd, (const char*)&msg, sizeof(msg), 0) == -1) {
-perror("[SENDER] mq_send failed");
+perror("n[SENDER] mq_send failed");
 } else {
-printf ("[SENDER] Sent message %d. Pausing...", i);
+printf ("\n[SENDER] Sent message %d. Pausing...", i);
 }
 sleep(2);
 }
 // 3. Send a termination signal message
 msg.counter = -1;
 if (mq_send(mqd, (const char*)&msg, sizeof(msg), 0) == -1) {
-perror("[SENDER] mq_send failed for termination signal");
+perror("\n[SENDER] mq_send failed for termination signal");
 } else {
-printf("[SENDER] Sent termination signal (-1). Waiting for receiver...");
+printf("\n[SENDER] Sent termination signal (-1). Waiting for receiver...");
 }
 }
 int main() {
