@@ -3,17 +3,15 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/wait.h>
-// #include <cstring>
-// #include <cstdlib>
-//using namespace std;
 
 #include <string.h>
 #include <stdlib.h>
+
 //TODO 
-#define PORT 8080; // Mr sharaf
-typedef struct {
-int client_sockets[2]; // num of players ig
-} GameState;
+// #define PORT 8080; // Mr sharaf
+// typedef struct {
+// int client_sockets[2]; // num of players ig
+// } GameState;
 ////////////////
 
 // Define constants for the message queue
@@ -33,12 +31,9 @@ struct Message msg;
 for (int i = 1; i <= 3; ++i) {
 // 1. Prepare the message
 msg.counter = i;
-char str[20]; // Buffer to hold the string
+//TODO
+char str[20]; // Buffer to hold the string why we usin 20 here chat?
 sprintf(str, "%d", i); // Converts int to string
-// strcat(MESSAGE_PREFIX, str) ;
-// char full_msg_str[] = {MESSAGE_PREFIX};
-// strncpy(msg.buffer, full_msg_str, sizeof(msg.buffer) - 1);
-//char iTostr = i;
 const char* full_msg_str = MESSAGE_PREFIX ;
 strncpy(msg.buffer, full_msg_str, sizeof(msg.buffer) - 1);
 strncpy(msg.buffer+ strlen(msg.buffer), str, strlen(str)+1);

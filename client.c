@@ -3,9 +3,6 @@
 #include <mqueue.h>
 #include <fcntl.h>
 #include <unistd.h>
-//#include <cstring>
-//#include <cstdlib>
-//using namespace std;
 
 #include<stdbool.h> // header file to use bool variables in C. else would use 1 or ;;.
 
@@ -19,24 +16,24 @@ int main(int argc, char* argv[]) {
 
 // Socket Code provided by Mr Sharaf
 // TO DO fix this connect to server make server listen 4 connections
-int sock = 0;
-struct sockaddr_in serv_addr;
-ClientState state;
-char buffer [256] = {0};
-if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-printf("Socket creation error\n");
-return -1; 
-}
-serv_addr.sin_family = AF_INET;
-serv_addr.sin_port = htons (PORT);
-if (inet_pton (AF_INEТ, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
-printf("Invalid address\n");
-return -1; 
-}
-if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
-printf("Connection failed\n");
-return -1;
-}
+// int sock = 0;
+// struct sockaddr_in serv_addr;
+// ClientState state;
+// char buffer [256] = {0};
+// if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+// printf("Socket creation error\n");
+// return -1; 
+// }
+// serv_addr.sin_family = AF_INET;
+// serv_addr.sin_port = htons (PORT);
+// if (inet_pton (AF_INEТ, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+// printf("Invalid address\n");
+// return -1; 
+// }
+// if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
+// printf("Connection failed\n");
+// return -1;
+// }
 
 if (argc != 2) {
     //char* c = argv[0];
@@ -54,9 +51,7 @@ perror("\n[RECEIVER] mq_open failed");
 return 1;
 }
 printf ("\n[RECEIVER] Child Process (PID: %d) connected to message queue." , getpid()) ;
-//int pid = getpid();
-//printf( "\n%d) connected to message queue." , getpid()) ;
-//printf ( ") connected to message queue." );
+
 // 2. Continuously receive messages until termination signal (-1)
 while (true) {
 // Receive the message. It blocks until a message is available.
@@ -70,10 +65,6 @@ printf ("\n[RECEIVER] Received termination signal. Exiting." ) ;
 break;
 }
 printf( "\n[RECEIVER] Received Counter: %d  | Message: %s", msg.counter, msg.buffer);
-// int msg_counter = msg.counter;
-//printf ( "%d", msg.counter) ;
-// printf(" | Message: ");
-// printf (msg.buffer );
 }
 // Cleanup: Close the message queue descriptor
 mq_close(mqd);
