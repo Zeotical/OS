@@ -9,6 +9,12 @@
 
 #include <string.h>
 #include <stdlib.h>
+//TODO 
+#define PORT 8080; // Mr sharaf
+typedef struct {
+int client_sockets[2]; // num of players ig
+} GameState;
+////////////////
 
 // Define constants for the message queue
 const char* MQ_NAME = "/my_ipc_mq";
@@ -52,6 +58,7 @@ if (mq_send(mqd, (const char*)&msg, sizeof(msg), 0) == -1) {
 perror("\n[SENDER] mq_send failed for termination signal");
 } else {
 printf("\n[SENDER] Sent termination signal (-1). Waiting for receiver...");
+//TO DO fix sync problem here
 }
 }
 int main() {

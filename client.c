@@ -16,6 +16,28 @@ int counter;
 char buffer[252];
 };
 int main(int argc, char* argv[]) {
+
+// Socket Code provided by Mr Sharaf
+// TO DO fix this connect to server make server listen 4 connections
+int sock = 0;
+struct sockaddr_in serv_addr;
+ClientState state;
+char buffer [256] = {0};
+if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+printf("Socket creation error\n");
+return -1; 
+}
+serv_addr.sin_family = AF_INET;
+serv_addr.sin_port = htons (PORT);
+if (inet_pton (AF_INEТ, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+printf("Invalid address\n");
+return -1; 
+}
+if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
+printf("Connection failed\n");
+return -1;
+}
+
 if (argc != 2) {
     //char* c = argv[0];
 fprintf(stderr ,"Usage: %c <MQ_NAME>" , argv[0]);
