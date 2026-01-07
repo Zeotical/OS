@@ -24,7 +24,11 @@ int main(int argc, char* argv[]) {
 int sock = 0;
 struct sockaddr_in serv_addr;
 //ClientState state;
-char buffer [256] = {0};
+//char buffer [256] = {0};
+    int status, valread, client;
+    
+char buffer[1024] = { 0 };
+
 if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 printf("Socket creation error\n");
 return -1; 
@@ -41,13 +45,16 @@ return -1;
 }
 else{
   printf("Connection established\n");  
+  valread = read(sock, buffer,1024 - 1); 
+printf("%s\n", buffer);
 }
 
+
 if (argc != 2) {
-    //char* c = argv[0];
-fprintf(stderr ,"Usage: %c <MQ_NAME>" , argv[0]);
+fprintf(stderr ,"Usage: %s <MQ_NAME>" , argv[0]);
 return 1;
 }
+
 const char* MQ_NAME = argv[1];
 mqd_t mqd;
 struct Message msg;
@@ -74,7 +81,9 @@ break;
 }
 printf( "\n[RECEIVER] Received Counter: %d  | Message: %s", msg.counter, msg.buffer);
 }
+
 // Cleanup: Close the message queue descriptor
+close(client);
 mq_close(mqd);
 return 0;
 }
