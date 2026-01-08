@@ -41,8 +41,17 @@ return -1;
 
 valread = read(sock, buffer,1024 - 1); 
 printf("%s\n", buffer);
+char myNum[100];
+
+// Ask the user to type a number
+printf("Type a letter: \n");
+
+// Get and save the number the user types
+scanf("%s", &myNum);
+
+send(sock, myNum, strlen(myNum), 0);
 
 // Cleanup: Close the message queue descriptor
-close(client);
+close(sock);
 return 0;
 }

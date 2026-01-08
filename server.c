@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <fcntl.h>  //used to manipulate file descriptors
+#include <fcntl.h> //used to manipulate file descriptors
 #include <unistd.h>
 #include <sys/wait.h>
 
@@ -27,7 +27,7 @@ int main()
     socklen_t addrlen = sizeof(address);
     char buffer[1024] = {0};
     char hello[] = "Hello from server";
-    int counter = 0;
+    int player_no = 1;
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -55,23 +55,23 @@ int main()
     }
     else
     {
-
         printf("\nBinding socket to port 8080");
     }
     // make this a loop wait for clients to join
-    while (counter < 2)
-    {
-        if (listen(server_fd, 3) < 0)
-        {
-            perror("listen");
-            exit(EXIT_FAILURE);
-        }
-        else
-        {
+    while (player_no < 3) // while loop for connecting clients
+   {
 
-            printf("\nServer listening on port 8080");
-            printf("\nWaiting for player to join");
-        }
+    if (listen(server_fd, 3) < 0)
+    {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+     printf("\nServer listening on port 8080");
+    }
+    
+        printf("\nWaiting for player %d to join", player_no);
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0)
         {
             perror("accept");
@@ -79,8 +79,6 @@ int main()
         }
         else
         {
-            counter++;
-            printf("\nPlayer joined.");
             // --- Fork the Child (Receiver) Process ---
             pid_t pid = fork();
             if (pid < 0)
@@ -92,13 +90,18 @@ int main()
             }
             else if (pid == 0)
             {
+                printf("\nPlayer % d joined." , player_no);
+                player_no++;
                 // // Child Process: Execute the Receiver Program
+                
                 send(new_socket, hello, strlen(hello), 0);
+                valread = read(new_socket, buffer,1024 - 1);
+                printf("%s\n", buffer);
+                // closing the connected socket
+
                 close(new_socket);
 
-                close(server_fd);
-
-                //execl("./client", "client", NULL);
+                // execl("./client", "client", NULL);
 
                 // execl only returns if an error occurred
                 // perror("execl failed");
@@ -108,33 +111,37 @@ int main()
 
                 // exit(EXIT_FAILURE);
             }
-            // else
-            // {
-            //     // // Parent Process: Run the Sender logic
+            else
+            {
+                // // Parent Process: Run the Sender logic
 
-            //     // send(new_socket, hello, strlen(hello), 0);
+                // send(new_socket, hello, strlen(hello), 0);
 
-            //     // // Wait for the child to finish
-            //     wait(NULL);
-            //     // // Cleanup: Close and unlink the message queue
-            //     close(new_socket);
+                // // Wait for the child to finish
+                wait(NULL);
+                // // Cleanup: Close and unlink the message queue
+                close(new_socket);
 
-            //     close(server_fd);
+                close(server_fd);
 
-            //     printf("\n[SENDER] Parent finished and cleaned up message queue.");
-            // }
+                printf("\n[SENDER] Parent finished and cleaned up message queue.");
+            }
         }
-    }
+    } // while loop
 
     // Wait for the child to finish
-    wait(NULL);
-    // Cleanup: Close and unlink the message queue
-   
-    close(new_socket);
+    // wait(NULL);
+    // // Cleanup: Close and unlink the message queue
 
-    close(server_fd);
+    // // valread = read(new_socket, buffer,
+    // //                1024 - 1);
+    // // printf("%s\n", buffer);
 
-    printf("\n[SENDER] Parent finished and cleaned up message queue.");
+    // close(new_socket);     // closing the connected socket
+
+    // close(server_fd);     // closing the listening socket
+
+    // printf("\n[SERVER] Parent finished and cleaned up message queue.");
 
     return 0;
 }
