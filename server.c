@@ -55,22 +55,21 @@ int main()
     }
     else
     {
-        printf("\nBinding socket to port 8080");
+        printf("Binding socket to port 8080\n");
     }
     // make this a loop wait for clients to join
     if (listen(server_fd, 3) < 0)
     {
-        perror("listen");
+        perror("listen\n");
         exit(EXIT_FAILURE);
     }
     else
     {
-     printf("\nServer listening on port 8080");
+     printf("Server listening on port 8080\n");
     }
     while (player_no < 3) // while loop for connecting clients
    {
-        printf("\nWaiting for player %d to join\n", player_no);
-        fflush(stdout);
+        printf("Waiting for player %d to join\n", player_no);
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0)
         {
             perror("accept");
@@ -93,7 +92,6 @@ int main()
             {
                 //close(server_fd); //no need for child to listen for connections
                 printf("Player % d joined.\n" , player_no);
-                fflush(stdout);
                 player_no++;
                 // // Child Process: Execute the Receiver Program
                 
