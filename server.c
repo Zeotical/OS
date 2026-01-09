@@ -58,9 +58,6 @@ int main()
         printf("\nBinding socket to port 8080");
     }
     // make this a loop wait for clients to join
-    while (player_no < 3) // while loop for connecting clients
-   {
-
     if (listen(server_fd, 3) < 0)
     {
         perror("listen");
@@ -70,8 +67,10 @@ int main()
     {
      printf("\nServer listening on port 8080");
     }
-    
-        printf("\nWaiting for player %d to join", player_no);
+    while (player_no < 3) // while loop for connecting clients
+   {
+        printf("\nWaiting for player %d to join\n", player_no);
+        fflush(stdout);
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0)
         {
             perror("accept");
@@ -80,26 +79,30 @@ int main()
         else
         {
             // --- Fork the Child (Receiver) Process ---
+            if(player_no<3){}
             pid_t pid = fork();
+            int pro = 0;
             if (pid < 0)
             {
                 perror("fork failed");
-                // mq_unlink(MQ_NAME);
                 close(server_fd);
+                close(new_socket); // i think only
                 return 1;
             }
             else if (pid == 0)
             {
-                printf("\nPlayer % d joined." , player_no);
+                //close(server_fd); //no need for child to listen for connections
+                printf("Player % d joined.\n" , player_no);
+                fflush(stdout);
                 player_no++;
                 // // Child Process: Execute the Receiver Program
                 
                 send(new_socket, hello, strlen(hello), 0);
                 valread = read(new_socket, buffer,1024 - 1);
                 printf("%s\n", buffer);
-                // closing the connected socket
+                pro = 1;
 
-                close(new_socket);
+                // close(server_fd);
 
                 // execl("./client", "client", NULL);
 
@@ -107,15 +110,17 @@ int main()
                 // perror("execl failed");
                 // close(new_socket);
 
-                // close(server_fd);
+                //close(server_fd);
 
                 // exit(EXIT_FAILURE);
             }
+
             else
             {
-                // // Parent Process: Run the Sender logic
 
-                // send(new_socket, hello, strlen(hello), 0);
+                // Parent Process: Run the Sender logic
+
+                //send(new_socket, hello, strlen(hello), 0);
 
                 //Wait for all child to finish
                 while(wait(NULL)>0){
@@ -131,6 +136,15 @@ int main()
         }
     } // while loop
 
+    // while(wait(NULL)>0){
+    //             wait(NULL);
+    //             }
+    //             // // Cleanup: Close the connected and listening socket
+    //             close(new_socket);
+
+    //             close(server_fd);
+
+    //             printf("\n[SENDER] Parent finished and cleaned up message queue.");
     // Wait for the child to finish
     // wait(NULL);
     // // Cleanup: Close and unlink the message queue
@@ -141,7 +155,7 @@ int main()
 
     // close(new_socket);     // closing the connected socket
 
-    // close(server_fd);     // closing the listening socket
+    //close(server_fd);     // closing the listening socket
 
     // printf("\n[SERVER] Parent finished and cleaned up message queue.");
 
