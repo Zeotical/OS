@@ -117,9 +117,11 @@ int main()
 
                 // send(new_socket, hello, strlen(hello), 0);
 
-                // // Wait for the child to finish
+                //Wait for all child to finish
+                while(wait(NULL)>0){
                 wait(NULL);
-                // // Cleanup: Close and unlink the message queue
+                }
+                // // Cleanup: Close the connected and listening socket
                 close(new_socket);
 
                 close(server_fd);
