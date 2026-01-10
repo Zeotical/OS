@@ -2,14 +2,12 @@
 #include <fcntl.h> //used to manipulate file descriptors
 #include <unistd.h>
 #include <sys/wait.h>
-
 #include <string.h>
 #include <stdlib.h>
-
-// TODO
 #define PORT 8080 // Mr sharaf
 #include <netinet/in.h>
 #include <sys/socket.h>
+
 // #include <asm-generic/socket.h> used for SO_REUSEPORT
 
 // typedef struct {
@@ -67,6 +65,7 @@ int main()
     {
      printf("Server listening on port 8080\n");
     }
+    // make this a loop wait for clients to join
     while (player_no < 3) // while loop for connecting clients
    {
         printf("Waiting for player %d to join\n", player_no);
@@ -77,85 +76,47 @@ int main()
         }
         else
         {
-            // --- Fork the Child (Receiver) Process ---
-            if(player_no<3){}
+            // --- Fork the Child (CLient) Process ---
             pid_t pid = fork();
-            int pro = 0;
             if (pid < 0)
             {
                 perror("fork failed");
-                close(server_fd);
-                close(new_socket); // i think only
+                close(new_socket); 
                 return 1;
             }
             else if (pid == 0)
             {
-                //close(server_fd); //no need for child to listen for connections
+                close(server_fd); //no need for child to listen for connections
                 printf("Player % d joined.\n" , player_no);
-                player_no++;
                 // // Child Process: Execute the Receiver Program
-                
                 send(new_socket, hello, strlen(hello), 0);
                 valread = read(new_socket, buffer,1024 - 1);
                 printf("%s\n", buffer);
-                pro = 1;
+                
+                close(new_socket);
+                _exit(32); // child exits
 
-                // close(server_fd);
-
-                // execl("./client", "client", NULL);
-
-                // execl only returns if an error occurred
-                // perror("execl failed");
-                // close(new_socket);
-
-                //close(server_fd);
-
-                // exit(EXIT_FAILURE);
             }
 
             else
             {
-
-                // Parent Process: Run the Sender logic
-
-                //send(new_socket, hello, strlen(hello), 0);
-
-                //Wait for all child to finish
-                while(wait(NULL)>0){
-                wait(NULL);
-                }
-                // // Cleanup: Close the connected and listening socket
-                close(new_socket);
-
-                close(server_fd);
-
-                printf("\n[SENDER] Parent finished and cleaned up message queue.");
+                // Parent Process: Run the Server logic
+                    wait(NULL); // keepin this for printf player no for now.
+                close(new_socket); // close connected client socket, let child deal with it
+                player_no++;
+    
             }
         }
     } // while loop
 
-    // while(wait(NULL)>0){
-    //             wait(NULL);
-    //             }
-    //             // // Cleanup: Close the connected and listening socket
-    //             close(new_socket);
+    //TODO thread for client turn ++ signchld for non blocking reapin
+    // Reap all child processes
+    while(wait(NULL)>0){ //wait(NULL) returns a positive value(PID) of child if it exits or no error happens
+    wait(NULL);
+    }
 
-    //             close(server_fd);
+    close(server_fd); // Close listening socket
 
-    //             printf("\n[SENDER] Parent finished and cleaned up message queue.");
-    // Wait for the child to finish
-    // wait(NULL);
-    // // Cleanup: Close and unlink the message queue
-
-    // // valread = read(new_socket, buffer,
-    // //                1024 - 1);
-    // // printf("%s\n", buffer);
-
-    // close(new_socket);     // closing the connected socket
-
-    //close(server_fd);     // closing the listening socket
-
-    // printf("\n[SERVER] Parent finished and cleaned up message queue.");
-
+    printf("\n[SERVER] Parent finished and reaped all child processes.");
     return 0;
 }
