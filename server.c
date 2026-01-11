@@ -19,7 +19,7 @@ const char* SHM_NAME = "/my_ipc_shm";
 const size_t SHM_SIZE = 1024;
 const char* MESSAGE = "Hello from the Writer! Data cycle:\n";
 
-typedef struct {
+typedef struct { //typedef creates a shortcut alias so we can refer to that structure using just a single name.struct defines a new data structure that requires the struct keyword for every declaration.
 int current_player;
 int client_sockets[3]; // num of players ig
 char buffer[256];
@@ -31,8 +31,10 @@ int x = 10;
 // Global Mutex Locks (Resources)
 pthread_mutex_t turn_mutex; // Assume Order = 1
 
-void* turn(SharedGameState *gameState_ptr)
+void* turn(void *arg)
 {
+    SharedGameState *gameState_ptr = ( SharedGameState *)arg;
+
 //  usleep(50000); // sleep for 50000 micro seconds
 //  printf("Thread 1: %d\n", getpid());
 //  x++;
@@ -44,24 +46,20 @@ void* turn(SharedGameState *gameState_ptr)
 // //wakes up and talks with client
 // //send this to other player's waiting for other's turn OR jus with name/number
     int i = 0 ;
- while (gameState_ptr->current_player<3){
-    // gameState_ptr->current_player = i;
-    if(gameState_ptr->client_sockets[gameState_ptr->current_player]){
+ while (i<3){
+    if(gameState_ptr->client_sockets[gameState_ptr->current_player] == i){
         pthread_mutex_lock(&turn_mutex);
-        printf("Thread 1: Acquired first_mutex. Now acquiring second_mutex...\n");
- 
+        printf("Thread 1: Acquired first_mutex.\n");
         // CRITICAL SECTION
         printf("Thread 1: Acquired lock and is doing work.\n");
-// Write data into the shared memory
+        while(sizeof(gameState_ptr->client_sockets) != 0){
+        i = i % sizeof(gameState_ptr->client_sockets);
+        gameState_ptr->current_player = i; // Write data into the shared memory
+        i++;
+        //notify player
+        //(wait for it to finish, it will notify back w a flag or sigchd?)
+        }
 // shm_ptr->counter = i;
-    gameState_ptr->current_player = i;
-
-    // char str[20]; // Buffer to hold the string why we usin 20 here chat?
-    // sprintf(str, "%d", i); // Converts int to string
-    // const char* full_msg = MESSAGE;
-    // strncpy(gameState_ptr->buffer, full_msg, sizeof(gameState_ptr->buffer) - 1);
-    // shm_ptr->buffer[sizeof(shm_ptr->buffer) - 1] = '\0';
-    // strncpy(shm_ptr->buffer + strlen(shm_ptr->buffer), str, strlen(str)+1);
 
     printf("[WRITER] Wrote message %d. Pausing...\n",i);
     sleep(2); // Pause to let the reader read
@@ -177,19 +175,22 @@ shm_ptr->counter = 0;
             else if (pid == 0)
             {
                 //add connected client to array
+                if(sizeof(client_sockets)<3){
                 client_sockets[player_no-1] = new_socket;
+                }
                 close(server_fd); //no need for child to listen for connections
                 printf("Player % d joined.\n" , player_no);
+                new_socket = client_sockets[shm_ptr->current_player];
                 send(new_socket, hello, strlen(hello), 0);
                 valread = read(new_socket, buffer,1024 - 1);
                 printf("%s\n", buffer);
-
+                if(player_no>4){
                 while (shm_ptr->counter != -1) {
                 if (shm_ptr->counter > 0) {
                 printf("[READER] Received Counter: %d  | Message: %s \n", shm_ptr->counter,shm_ptr->buffer );
                 }
                 usleep(500000); // Wait 0.5 seconds before checking again
-                }
+                } }
                 //sleep(2);
                 close(new_socket);
                 _exit(32); // child exits
@@ -208,11 +209,11 @@ shm_ptr->counter = 0;
         }
     } // while loop
 
-    struct SharedGameState* gameState;
+    // struct SharedGameState* gameState_ptr;
     // declare thread
     pthread_t scheduler ;
     // create the threads
-    pthread_create(&scheduler, NULL, turn, gameState);
+    pthread_create(&scheduler, NULL, turn, shm_ptr);
     // wait for the threads to complete
     pthread_join(scheduler, NULL);
 
