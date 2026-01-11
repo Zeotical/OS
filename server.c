@@ -38,18 +38,19 @@ void* turn(void *arg)
 {
     SharedGameState *gameState_ptr = ( SharedGameState *)arg;
     int i = 0 ;
+    int turn = 0;
  while (i<3){
-    if(gameState_ptr->counter < 0){
+    // if(gameState_ptr->counter < 0){
         pthread_mutex_lock(&turn_mutex);
         printf("Thread 1: Acquired first_mutex.\n");
         // CRITICAL SECTION
         printf("Thread 1: Acquired lock and is doing work.\n");
-        i = i % 3;
-        gameState_ptr->current_player = i; // Write data into the shared memory
+        turn = i % 3;
+        gameState_ptr->current_player = turn; // Write data into the shared memory
         i++;
         pthread_mutex_unlock(&turn_mutex);
         printf("Thread 1: Finished and released both locks.\n");
-    }
+    //}
         sem_wait(&turn_finish);
 
     }
@@ -68,7 +69,7 @@ int main()
     //char buffer[1024] = {0};
     char hello[] = "Hello from server";
     int player_no = 1;
-    sem_init(&turn_finish, 0, 1);
+    sem_init(&turn_finish, 1, 0);
 
 int shm_fd;
 SharedGameState* shm_ptr = NULL;
@@ -164,7 +165,7 @@ return 1;
                 close(server_fd); //no need for child to listen for connections
                 printf("Player % d joined.\n" , player_no);
                 //while(1){
-                // if(shm_ptr->current_player == player_no-1){
+                //if(shm_ptr->current_player == player_no-1){
                 new_socket = shm_ptr->client_sockets[shm_ptr->current_player];
                 send(new_socket, hello, strlen(hello), 0);
                 valread = read(new_socket, shm_ptr->buffer,1024 - 1);
@@ -173,7 +174,7 @@ return 1;
                 close(new_socket);
                 _exit(32); // child exits}
                 //break;
-                   // }
+                    //}
                    //}
 
                 //exit(EXIT_SUCCESS);
