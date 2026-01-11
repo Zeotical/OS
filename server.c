@@ -10,23 +10,26 @@
 
 #include <pthread.h>
 #include <sys/mman.h>
+#include <semaphore.h>
+
 
 
 // #include <asm-generic/socket.h> used for SO_REUSEPORT
 
 // Define constants for the shared memory
 const char* SHM_NAME = "/my_ipc_shm";
-const size_t SHM_SIZE = 1024;
-const char* MESSAGE = "Hello from the Writer! Data cycle:\n";
+//const size_t SHM_SIZE = 1024;
+#define SHM_SIZE sizeof(SharedGameState)
+sem_t turn_finish;
 
 typedef struct { //typedef creates a shortcut alias so we can refer to that structure using just a single name.struct defines a new data structure that requires the struct keyword for every declaration.
 int current_player;
-int client_sockets[3]; // num of players ig
-char buffer[256];
+int client_sockets[2]; // num of players ig
+char buffer[1024];
 int counter;
+int turn_done;
 } SharedGameState;
 ////////////////
-int x = 10;
 
 // Global Mutex Locks (Resources)
 pthread_mutex_t turn_mutex; // Assume Order = 1
@@ -34,48 +37,25 @@ pthread_mutex_t turn_mutex; // Assume Order = 1
 void* turn(void *arg)
 {
     SharedGameState *gameState_ptr = ( SharedGameState *)arg;
-
-//  usleep(50000); // sleep for 50000 micro seconds
-//  printf("Thread 1: %d\n", getpid());
-//  x++;
-//  printf("Thread 1: x = %d\n", x);
-//decide whose turn it is
-// //while smth either all connected player didn't exit 
-// //client_socket[current_player_turn]
-// //child with that socket gets siignaled
-// //wakes up and talks with client
-// //send this to other player's waiting for other's turn OR jus with name/number
     int i = 0 ;
  while (i<3){
-    if(gameState_ptr->client_sockets[gameState_ptr->current_player] == i){
+    if(gameState_ptr->counter < 0){
         pthread_mutex_lock(&turn_mutex);
         printf("Thread 1: Acquired first_mutex.\n");
         // CRITICAL SECTION
         printf("Thread 1: Acquired lock and is doing work.\n");
-        while(sizeof(gameState_ptr->client_sockets) != 0){
-        i = i % sizeof(gameState_ptr->client_sockets);
+        i = i % 3;
         gameState_ptr->current_player = i; // Write data into the shared memory
         i++;
-        //notify player
-        //(wait for it to finish, it will notify back w a flag or sigchd?)
-        }
-// shm_ptr->counter = i;
-
-    printf("[WRITER] Wrote message %d. Pausing...\n",i);
-    sleep(2); // Pause to let the reader read
-    }
-// Set a stop signal for the reader
-gameState_ptr->counter = -1;
-printf("[WRITER] Sent termination signal (-1). Waiting for reader...\n");
-        //thread updating memory
-        // Release locks in reverse order of acquisition
         pthread_mutex_unlock(&turn_mutex);
         printf("Thread 1: Finished and released both locks.\n");
-        pthread_exit(0);
-        i++;
     }
-}
+        sem_wait(&turn_finish);
 
+    }
+        pthread_exit(0);
+
+}
 
 int main()
 {
@@ -85,10 +65,10 @@ int main()
     struct sockaddr_in address;
     int opt = 1;
     socklen_t addrlen = sizeof(address);
-    char buffer[1024] = {0};
+    //char buffer[1024] = {0};
     char hello[] = "Hello from server";
     int player_no = 1;
-    int client_sockets[3];
+    sem_init(&turn_finish, 0, 1);
 
 int shm_fd;
 SharedGameState* shm_ptr = NULL;
@@ -111,9 +91,11 @@ perror("mmap failed");
 shm_unlink(SHM_NAME);
 return 1;
 }
+//pthread_t scheduler ;
+    // create the threads
+   // pthread_create(&scheduler, NULL, turn, shm_ptr);
 // Initialize the shared data structure
-shm_ptr->current_player= 0;
-shm_ptr->counter = 0;
+// shm_ptr->current_player= 0;
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -175,25 +157,25 @@ shm_ptr->counter = 0;
             else if (pid == 0)
             {
                 //add connected client to array
-                if(sizeof(client_sockets)<3){
-                client_sockets[player_no-1] = new_socket;
+                if(shm_ptr->counter<2){
+                shm_ptr->client_sockets[player_no-1] = new_socket;
+                shm_ptr->counter++;
                 }
                 close(server_fd); //no need for child to listen for connections
                 printf("Player % d joined.\n" , player_no);
-                new_socket = client_sockets[shm_ptr->current_player];
+                //while(1){
+                // if(shm_ptr->current_player == player_no-1){
+                new_socket = shm_ptr->client_sockets[shm_ptr->current_player];
                 send(new_socket, hello, strlen(hello), 0);
-                valread = read(new_socket, buffer,1024 - 1);
-                printf("%s\n", buffer);
-                if(player_no>4){
-                while (shm_ptr->counter != -1) {
-                if (shm_ptr->counter > 0) {
-                printf("[READER] Received Counter: %d  | Message: %s \n", shm_ptr->counter,shm_ptr->buffer );
-                }
-                usleep(500000); // Wait 0.5 seconds before checking again
-                } }
-                //sleep(2);
+                valread = read(new_socket, shm_ptr->buffer,1024 - 1);
+                printf("%s\n", shm_ptr->buffer);
+                sem_post(&turn_finish);
                 close(new_socket);
-                _exit(32); // child exits
+                _exit(32); // child exits}
+                //break;
+                   // }
+                   //}
+
                 //exit(EXIT_SUCCESS);
 
             }
@@ -201,7 +183,7 @@ shm_ptr->counter = 0;
             else
             {
                 // Parent Process: Run the Server logic
-                    wait(NULL); // keepin this for printf player no for now.
+                wait(NULL); // keepin this for printf player no for now.
                 close(new_socket); // close connected client socket, let child deal with it
                 player_no++;
     
@@ -211,13 +193,12 @@ shm_ptr->counter = 0;
 
     // struct SharedGameState* gameState_ptr;
     // declare thread
-    pthread_t scheduler ;
-    // create the threads
-    pthread_create(&scheduler, NULL, turn, shm_ptr);
+     pthread_t scheduler ;
+    // // create the threads
+     pthread_create(&scheduler, NULL, turn, shm_ptr);
     // wait for the threads to complete
-    pthread_join(scheduler, NULL);
+   //pthread_join(scheduler, NULL);
 
-    //run_writer(shm_ptr, pid);
     // Wait for the child to finish
     wait(NULL);
     
