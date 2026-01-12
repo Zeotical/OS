@@ -11,6 +11,14 @@
 #include <sys/socket.h>
 #define PORT 8080
 
+#include <pthread.h>
+#include <sys/mman.h>
+#include <semaphore.h>
+
+// Define constants for the shared memory
+const char* SHM_NAME = "/my_ipc_shm";
+#define SHM_SIZE sizeof(SharedGameState)
+
 int main(int argc, char* argv[]) {
 
 // Socket Code provided by Mr Sharaf
@@ -37,21 +45,26 @@ if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
 printf("Connection failed\n");
 return -1;
 }
-  printf("Connection to server established\n");  
+printf("Connection to server established\n");  
 
-valread = read(sock, buffer,1024 - 1); 
+valread = read(sock, buffer,1024 - 1);  // hello from server
 printf("%s\n", buffer);
 char myNum[100];
 
-// Ask the user to type a number
+while(1){
+
+valread = read(sock, buffer,1024 - 1); 
+if (valread <= 0) break;
+
+printf("%s\n", buffer);
 printf("Type a letter: \n");
 
-// Get and save the number the user types
+// Get and save the letter the user types
 scanf("%s", &myNum);
 
 send(sock, myNum, strlen(myNum), 0);
-
-// Cleanup: Close the message queue descriptor
+}
+// Cleanup: Close the socket
 close(sock);
 return 0;
 }

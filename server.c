@@ -23,7 +23,8 @@ int client_sockets[2]; // num of players ig
 char buffer[1024];
 int game_done;
 pthread_mutex_t turn_mutex;
-sem_t turn_finish;
+sem_t turn;
+sem_t player_finished;
 
 } SharedGameState;
 ////////////////
@@ -31,55 +32,57 @@ void* turn(void *arg)
 {
     SharedGameState *gameState_ptr = ( SharedGameState *)arg;
     int i = 0 ;
-    // gameState_ptr->game_done = 0;
- while (i!=2){
-    if(gameState_ptr->game_done == 0){
+ while (1){
+
+     if (gameState_ptr->game_done !=0) {
+                printf("WE EXITING\n");
+
+            break; // Exit the loop if the game is done
+        }
         pthread_mutex_lock(&gameState_ptr->turn_mutex);
         printf("Thread 1: Acquired first_mutex.\n");
         // CRITICAL SECTION
         printf("Thread 1: Acquired lock and is doing work.\n");
         gameState_ptr->current_player= i % 2;
         printf("Scheduler: Player %d's turn.\n", gameState_ptr->current_player + 1);
-        i++;
+        // i++;
         pthread_mutex_unlock(&gameState_ptr->turn_mutex);
         printf("Thread 1: Finished and released both locks.\n");
-        sem_post(&gameState_ptr->turn_finish); //signal player it's time for it's turn
-                
-    sem_wait(&gameState_ptr->turn_finish);  //wait until player finishes
-
-
+        sem_post(&gameState_ptr->turn); //signal player it's time for it's turn
+        sem_wait(&gameState_ptr->player_finished);  //wait until player finishes
+        i++;
+        sleep(1);
     }
-        // sem_wait(&gameState_ptr->turn_finish);
-    }
-        pthread_exit(0);
-
+        // pthread_exit(0);
+return NULL;
 }
-void game_start(void *arg, int my_player_id){
+void game_start(void *arg, int my_player_id, int local_socket){
     SharedGameState *shm_ptr = ( SharedGameState *)arg;
     char hello[] = "Hello from server";
-    // ssize_t valread;
-    // int new_socket;ssize_t
-shm_ptr->game_done == 0;
-while(shm_ptr->game_done == 0){
+    char YRTurn[] = "HEY YOUR TURN GOO";
+    shm_ptr->game_done = 0;
+    while(shm_ptr->game_done == 0){
 
-    //printf("Player % d joined.\n" , shm_ptr->current_player+1);
-    sem_wait(&shm_ptr->turn_finish); // 
-    pthread_mutex_lock(&shm_ptr->turn_mutex);
+        //printf("Player % d joined.\n" , shm_ptr->current_player+1);
+        sem_wait(&shm_ptr->turn); // wait for scheduler to assign turn
+        //pthread_mutex_lock(&shm_ptr->turn_mutex); //lock
 
-if(shm_ptr->current_player == my_player_id ){
+    if(shm_ptr->current_player == my_player_id ){ // if current_player == the current child
 
-    int new_socket = shm_ptr->client_sockets[my_player_id];
-    send(new_socket, hello, strlen(hello), 0);
-    ssize_t valread = read(new_socket, shm_ptr->buffer,1024 - 1);
-            if (valread <= 0) continue; // if connection closed, skip Mr sharaf
-    printf("%s\n", shm_ptr->buffer);
-    sem_post(&shm_ptr->turn_finish); 
-
-}
-            
-pthread_mutex_unlock(&shm_ptr->turn_mutex);
-
-}
+     local_socket = shm_ptr->client_sockets[my_player_id];
+        send(local_socket, YRTurn, strlen(YRTurn), 0);
+        memset(shm_ptr->buffer, 0, 1024);
+        ssize_t valread = read(local_socket, shm_ptr->buffer,1024 - 1);
+        if (valread <= 0) continue; // if connection closed, skip Mr sharaf
+        if (valread > 0) {
+                printf("Player %d says: %s\n", my_player_id + 1, shm_ptr->buffer);
+            }
+       // printf("%s\n", shm_ptr->buffer);
+    }            
+    //pthread_mutex_unlock(&shm_ptr->turn_mutex); // unlock happens whether we enter if or not //let scheduler change shared data
+    sem_post(&shm_ptr->player_finished);  // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
+    //usleep(100000);
+    }
 }
 int main()
 {
@@ -91,6 +94,7 @@ int main()
     socklen_t addrlen = sizeof(address);
     char buffer[1024] = {0};
     char hello[] = "Hello from server";
+    char YRTurn[] = "HEY YOUR TURN GOO";
     int player_no = 0;
 
     int shm_fd;
@@ -101,13 +105,13 @@ int main()
     perror("shm_open failed");
     return 1;
     }
+
     // 2. Set the size of the shared memory object
     if (ftruncate(shm_fd, SHM_SIZE) == -1) {
     perror("ftruncate failed");
     shm_unlink(SHM_NAME);
     return 1;
     }
-
 
     // 3. Map the shared memory object into the process's address space
     shm_ptr = (SharedGameState*)mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,shm_fd, 0);
@@ -124,18 +128,10 @@ int main()
 
     pthread_mutex_init(&shm_ptr->turn_mutex, &mattr);
 
-    sem_init(&shm_ptr->turn_finish, 1, 0);
+    sem_init(&shm_ptr->turn, 1, 0);
+    sem_init(&shm_ptr->player_finished, 1, 0);
+    shm_ptr->current_player = 0;
 
-shm_ptr->current_player = 0;
-//shm_ptr->client_sockets[0] = shm_ptr->client_sockets[1] = -1;
-// shm_ptr->game_done = 0;
-//memset(shm_ptr->buffer, 0, sizeof(shm_ptr->buffer));
-
- //pthread_t scheduler ;
-    //create the threads
-  // pthread_create(&scheduler, NULL, turn, shm_ptr);
-   //pthread_join(scheduler, NULL);
-    // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         perror("socket failed");
@@ -204,7 +200,7 @@ shm_ptr->current_player = 0;
                 // printf("%s\n", buffer);
                 
                 //if players joined satrt the game
-                game_start(shm_ptr, my_player_id);  // pass id
+                game_start(shm_ptr, my_player_id, new_socket);  // pass id
 
                 close(new_socket);
                 exit(0); // child exits
@@ -217,13 +213,9 @@ shm_ptr->current_player = 0;
                 //wait(NULL); // keepin this for printf player no for now.
                 close(new_socket); // close connected client socket, let child deal with it
                 player_no++;
-    
             }
         }
     } // while loop
-
-// shm_ptr->game_done = 1;
-
 
     //TODO thread for client turn ++ signchld for non blocking reapin
   pthread_t scheduler ;
