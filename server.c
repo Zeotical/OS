@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <semaphore.h>
+#include <signal.h>
 
 // Define constants for the shared memory
 const char* SHM_NAME = "/my_ipc_shm";
@@ -25,6 +26,7 @@ int game_done;
 pthread_mutex_t turn_mutex;
 sem_t turn;
 sem_t player_finished;
+int children[2];
 
 } SharedGameState;
 ////////////////
@@ -241,6 +243,8 @@ int main()
             {
                 // Parent Process: Run the Server logic
                 //wait(NULL); // keepin this for printf player no for now.
+                                shm_ptr->children[my_player_id] = pid;
+
                 close(new_socket); // close connected client socket, let child deal with it
                 player_no++;
             }
@@ -253,11 +257,16 @@ int main()
  pthread_create(&scheduler, NULL, turn, shm_ptr);
  
 pthread_join(scheduler, NULL);
+int s = 0;
+while(s != 2){
+kill(shm_ptr->children[s], SIGTERM);
 
+s++;
+}
     // Reap all child processes
-    // while(wait(NULL)>0){ //wait(NULL) returns a positive value(PID) of child if it exits or no error happens
-    // wait(NULL);
-    // }
+    while(wait(NULL)>0){ //wait(NULL) returns a positive value(PID) of child if it exits or no error happens
+    wait(NULL);
+    }
 
     close(server_fd); // Close listening socket
 // Cleanup: Unmap the memory and remove the shared object
