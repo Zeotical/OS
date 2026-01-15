@@ -53,9 +53,10 @@ char myNum[100];
 
 while(1){
 
-valread = read(sock, buffer,1024 - 1); 
+memset(buffer, 0, 1024);
+valread = read(sock, buffer,1024 - 1); //msg about whose turn it is
 if (valread <= 0) break;
-
+if (strstr(buffer, "YOUR TURN") != NULL) { // strmp checks exact match, strstr does it for any substring in the buffer & strncmp matches first N characters
 printf("%s\n", buffer);
 printf("Type a letter: \n");
 
@@ -63,6 +64,10 @@ printf("Type a letter: \n");
 scanf("%s", &myNum);
 
 send(sock, myNum, strlen(myNum), 0);
+}
+else{
+printf("%s\n", buffer); }
+
 }
 // Cleanup: Close the socket
 close(sock);

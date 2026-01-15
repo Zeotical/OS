@@ -43,8 +43,14 @@ void *turn(void *arg)
         printf("Player %d's turn.\n", gameState_ptr->current_player + 1);
         // Mutex Unlock
         pthread_mutex_unlock(&gameState_ptr->turn_mutex);
+        //Wake up all child processes
+        for (int s = 0; s < 2; s++) {
         sem_post(&gameState_ptr->turn);            // signal player it's time for it's turn
+        }
+        //Wait until they finish before moving to the next turn
+        for (int w = 0; w < 2; w++) {
         sem_wait(&gameState_ptr->player_finished); // wait until player finishes
+        }
         i++;
         // sleep(1);
     }
@@ -53,18 +59,19 @@ void *turn(void *arg)
 void game_start(void *arg, int my_player_id, int local_socket)
 {
     SharedGameState *shm_ptr = (SharedGameState *)arg;
-    char hello[] = "Hello from me";
-    char YRTurn[] = "HEY YOUR TURN GOO";
+    char wait_turn[1024];
+    char prompt[] = "YOUR TURN";
     shm_ptr->game_done = 0;
     int i = 0;
     while (i != 5)
     {
-        sem_wait(&shm_ptr->turn); // wait for scheduler to assign turn
+        sem_wait(&shm_ptr->turn); // wait for scheduler to assign turn   
+    
        if (shm_ptr->current_player == my_player_id)
         { // if current_player == the current child
 
             local_socket = shm_ptr->client_sockets[my_player_id];
-            send(local_socket, YRTurn, strlen(YRTurn), 0);
+            send(local_socket, prompt, strlen(prompt), 0);
             memset(shm_ptr->buffer, 0, 1024);
             ssize_t valread = read(local_socket, shm_ptr->buffer, 1024 - 1);
             if (valread <= 0)
@@ -74,16 +81,27 @@ void game_start(void *arg, int my_player_id, int local_socket)
                 printf("Player %d says: %s\n", my_player_id + 1, shm_ptr->buffer);
                 printf("%d\n", i);
             }
-            i++;
+            sem_post(&shm_ptr->player_finished); // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
+
+        }
+
+        else{
+
+        local_socket = shm_ptr->client_sockets[my_player_id];
+        sprintf(wait_turn, "Player %d's turn.Please wait.", shm_ptr->current_player+1);
+        send(local_socket, wait_turn, strlen(wait_turn), 0); 
+        memset(shm_ptr->buffer, 0, 1024);
+        sem_post(&shm_ptr->player_finished); // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
         }
         // pthread_mutex_unlock(&shm_ptr->turn_mutex); // unlock happens whether we enter if or not //let scheduler change shared data
-        if (i == 2)
+        if (i == 4)
         {
             printf("WE EXIT\n");
             shm_ptr->game_done = 1;
             close(shm_ptr->client_sockets[my_player_id]); // close socket connection of client who leaves
         }
-        sem_post(&shm_ptr->player_finished); // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
+        // sem_post(&shm_ptr->player_finished); // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
+        i++;
         // usleep(100000);
     }
 }
@@ -176,17 +194,14 @@ int main()
     // make this a loop wait for clients to join
     while (player_no < 2) // while loop for connecting clients
     {
-        for (player_no; player_no < 2; player_no++){
-            printf("Waiting for player %d to join\n", player_no + 1);
+        printf("Waiting for player %d to join\n", player_no + 1);
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0)
         {
             perror("accept");
             exit(EXIT_FAILURE);
         }
-        shm_ptr->client_sockets[player_no] = accept(server_fd, (struct sockaddr *)&address, &addrlen);
-    }
-        // else
-        // {
+        else
+        {
             // --- Fork the Child (CLient) Process ---
             int my_player_id = player_no;
             pid_t pid = fork();
@@ -222,7 +237,7 @@ int main()
                 close(new_socket); // close connected client socket, let child deal with it
                 player_no++;
             }
-       // }
+        }
     } // while loop
 
     // TODO thread for client turn ++ signchld for non blocking reapin
@@ -248,7 +263,7 @@ int main()
     // Cleanup: Unmap the memory and remove the shared object
     munmap(shm_ptr, SHM_SIZE);
     shm_unlink(SHM_NAME);
-    printf("[WRITER] Parent finished and cleaned up shared memory.\n");
+    printf("[SERVER] Parent finished and cleaned up shared memory.\n");
     printf("\n[SERVER] Parent finished and reaped all child processes.");
     return 0;
 }
