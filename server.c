@@ -34,14 +34,8 @@ void *turn(void *arg)
 {
     SharedGameState *gameState_ptr = (SharedGameState *)arg;
     int i = 0;
-    while (i != 6)
+    while (gameState_ptr->game_done != 1)
     {
-
-        if (i == 4)
-        {
-            printf("WE EXITING\n");
-            break; // Exit the loop if the game is done
-        }
         // Mutex lock
         pthread_mutex_lock(&gameState_ptr->turn_mutex);
         // CRITICAL SECTION
@@ -52,11 +46,9 @@ void *turn(void *arg)
         sem_post(&gameState_ptr->turn);            // signal player it's time for it's turn
         sem_wait(&gameState_ptr->player_finished); // wait until player finishes
         i++;
-        gameState_ptr->game_done++;
         sleep(1);
     }
-    // pthread_exit(0);
-    return NULL;
+    pthread_exit(0);
 }
 void game_start(void *arg, int my_player_id, int local_socket)
 {
@@ -88,6 +80,7 @@ void game_start(void *arg, int my_player_id, int local_socket)
         if (i == 2)
         {
             printf("WE EXIT\n");
+            shm_ptr->game_done = 1;
             close(shm_ptr->client_sockets[my_player_id]); // close socket connection of client who leaves
         }
         sem_post(&shm_ptr->player_finished); // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
@@ -104,9 +97,7 @@ int main()
     socklen_t addrlen = sizeof(address);
     char buffer[1024] = {0};
     char hello[] = "Hello from server";
-    char YRTurn[] = "HEY YOUR TURN GOO";
     int player_no = 0;
-
     int shm_fd;
     SharedGameState *shm_ptr = NULL;
     // 1. Create and open the shared memory object
@@ -224,9 +215,7 @@ int main()
             else
             {
                 // Parent Process: Run the Server logic
-                // wait(NULL); // keepin this for printf player no for now.
                 shm_ptr->children[my_player_id] = pid;
-
                 close(new_socket); // close connected client socket, let child deal with it
                 player_no++;
             }
