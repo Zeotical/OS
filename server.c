@@ -40,27 +40,27 @@ void *turn(void *arg)
         pthread_mutex_lock(&gameState_ptr->turn_mutex);
         // CRITICAL SECTION
         gameState_ptr->current_player = i % 2;
-        printf("Scheduler: Player %d's turn.\n", gameState_ptr->current_player + 1);
+        printf("Player %d's turn.\n", gameState_ptr->current_player + 1);
         // Mutex Unlock
         pthread_mutex_unlock(&gameState_ptr->turn_mutex);
         sem_post(&gameState_ptr->turn);            // signal player it's time for it's turn
         sem_wait(&gameState_ptr->player_finished); // wait until player finishes
         i++;
-        sleep(1);
+        // sleep(1);
     }
     pthread_exit(0);
 }
 void game_start(void *arg, int my_player_id, int local_socket)
 {
     SharedGameState *shm_ptr = (SharedGameState *)arg;
-    char hello[] = "Hello from server";
+    char hello[] = "Hello from me";
     char YRTurn[] = "HEY YOUR TURN GOO";
     shm_ptr->game_done = 0;
     int i = 0;
     while (i != 5)
     {
         sem_wait(&shm_ptr->turn); // wait for scheduler to assign turn
-        if (shm_ptr->current_player == my_player_id)
+       if (shm_ptr->current_player == my_player_id)
         { // if current_player == the current child
 
             local_socket = shm_ptr->client_sockets[my_player_id];
@@ -176,14 +176,17 @@ int main()
     // make this a loop wait for clients to join
     while (player_no < 2) // while loop for connecting clients
     {
-        printf("Waiting for player %d to join\n", player_no + 1);
+        for (player_no; player_no < 2; player_no++){
+            printf("Waiting for player %d to join\n", player_no + 1);
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0)
         {
             perror("accept");
             exit(EXIT_FAILURE);
         }
-        else
-        {
+        shm_ptr->client_sockets[player_no] = accept(server_fd, (struct sockaddr *)&address, &addrlen);
+    }
+        // else
+        // {
             // --- Fork the Child (CLient) Process ---
             int my_player_id = player_no;
             pid_t pid = fork();
@@ -219,7 +222,7 @@ int main()
                 close(new_socket); // close connected client socket, let child deal with it
                 player_no++;
             }
-        }
+       // }
     } // while loop
 
     // TODO thread for client turn ++ signchld for non blocking reapin
