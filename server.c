@@ -26,7 +26,9 @@ typedef struct
     pthread_mutex_t turn_mutex;
     sem_t turn;
     sem_t player_finished;
+    sem_t logging;
     int children[2];
+    char log_buffer[1024];
 
 } SharedGameState;
 ////////////////
@@ -54,6 +56,30 @@ void *turn(void *arg)
         i++;
         // sleep(1);
     }
+    pthread_exit(0);
+}
+
+void *logging(void *arg)
+{
+    SharedGameState *gameState_ptr = (SharedGameState *)arg;
+    int i = 0;
+    FILE *fptr;
+    // Create the logging file
+        fptr = fopen("game.log", "w");
+    while (gameState_ptr->game_done != 1)
+    {
+        sem_wait(&gameState_ptr->logging); // wait until player finishes
+        fprintf(fptr, gameState_ptr->log_buffer);
+        memset(gameState_ptr->log_buffer, 0, 1024);
+
+
+        //Create the scores file
+        // fptr = fopen("scores.txt", "w");
+
+        // fprintf(fptr, "Some text");
+    }
+    // Close the file after game is done
+    fclose(fptr);
     pthread_exit(0);
 }
 void game_start(void *arg, int my_player_id, int local_socket)
@@ -88,9 +114,10 @@ void game_start(void *arg, int my_player_id, int local_socket)
         else{
 
         local_socket = shm_ptr->client_sockets[my_player_id];
-        sprintf(wait_turn, "Player %d's turn.Please wait.", shm_ptr->current_player+1);
-        send(local_socket, wait_turn, strlen(wait_turn), 0); 
-        memset(shm_ptr->buffer, 0, 1024);
+        sprintf(shm_ptr->log_buffer, "Player %d's turn.Please wait.", shm_ptr->current_player+1);
+        send(local_socket,shm_ptr->log_buffer , strlen(shm_ptr->log_buffer), 0); 
+        // memset(shm_ptr->log_buffer, 0, 1024);
+        sem_post(&shm_ptr->logging);            // signal player it's time for it's turn
         sem_post(&shm_ptr->player_finished); // send signal to scheduler to get next turn (putting it here in case it is not the turn of child yet)
         }
         // pthread_mutex_unlock(&shm_ptr->turn_mutex); // unlock happens whether we enter if or not //let scheduler change shared data
@@ -152,6 +179,7 @@ int main()
 
     sem_init(&shm_ptr->turn, 1, 0);
     sem_init(&shm_ptr->player_finished, 1, 0);
+    sem_init(&shm_ptr->logging, 1, 0);
     shm_ptr->current_player = 0;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -215,6 +243,8 @@ int main()
             {
                 close(server_fd); // no need for child to listen for connections
                 printf("Player % d joined.\n", player_no + 1);
+                // sprintf(shm_ptr->log_buffer, "Player % d joined.\n", player_no + 1 );
+                // sem_post(&shm_ptr->logging);            // signal player it's time for it's turn
                 shm_ptr->client_sockets[my_player_id] = new_socket;
                 // // Child Process: Execute the Receiver Program
                 send(new_socket, hello, strlen(hello), 0);
@@ -242,10 +272,15 @@ int main()
 
     // TODO thread for client turn ++ signchld for non blocking reapin
     pthread_t scheduler;
+    pthread_t logger;
+
     //create the threads
     pthread_create(&scheduler, NULL, turn, shm_ptr);
+    pthread_create(&logger, NULL, logging, shm_ptr);
 
     pthread_join(scheduler, NULL);
+    pthread_join(logger, NULL);
+
     int s = 0;
     // kill the children
     while (s != 2)
