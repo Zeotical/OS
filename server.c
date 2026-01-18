@@ -10,10 +10,25 @@
 #include <fcntl.h>
 #include <semaphore.h>
 
+#include <ctype.h>
+#include <time.h> //rand() amd seed()
+
 #define PORT 5555
-#define MAX_PLAYERS 2
+//#define MAX_PLAYERS 2
 #define WORD "apple"
 
+//Game global constraints
+//const int MIN_PLAYERS = 3;
+#define MAX_PLAYERS 2
+#define STR_LEN 255
+#define CHAR_SET_SIZE 26
+const int INIT_RANDOM_SIZE = 4;
+#define USER_INPUT_SIZE 2
+const char CHAR_MAP[26] =   {
+                                'A','B','C','D','E','F','G','H','I','J','K','L','M',
+                                'N','O','P','Q','R','S','T','U','V','W','X','Y','Z'
+                            };
+//SHARED GAME STATE
 typedef struct {
     int current_turn;
     int total_players;
@@ -30,6 +45,250 @@ typedef struct {
 
 shared_state_t *state;
 
+//GAME FUNCTIONS
+
+void idiom_char_list_init(int* idiom_char_list,const char* idiom){
+    int size = strlen(idiom);
+    for (int i = 0; i < size; i++) //loop through idiom
+    {
+        if(!isalpha(idiom[i])){
+            continue;
+        }
+
+        int num = toupper(idiom[i]) - 'A' + 1;
+        for (int j = 0; j < size; j++)
+        {
+            if(idiom_char_list[j] == 0){
+                idiom_char_list[j] = num;
+                break;
+            } else if(idiom_char_list[j] == num){
+                break;
+            }
+        }   
+    }
+}
+
+void idiom_char_list_clear(int* idiom_char_list, int index){
+    int size = get_last_index(idiom_char_list);
+
+    
+    for(int i = index; i < size; i++){
+        int next = idiom_char_list[i+1];
+        idiom_char_list[i] = next;
+    }
+}
+
+int get_list_index_by_char(const int* list, char character){
+
+    int size = get_last_index(list);
+    int char_num = toupper(character) - 'A' + 1;
+
+    for(int i = 0; i < size; i++){
+        if(list[i] == char_num){
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+//printBorder()
+
+//printOpening()
+
+//printTitle()
+
+
+int check_guessing(const char* idiom, const char* user_guess){
+    for (int i = 0; i < strlen(idiom); i++)
+    {
+        if(toupper(idiom[i]) != toupper(user_guess[i])){
+            return 0;
+        }
+    }
+
+    printf("You win!\n");
+    printf("idiom= %s\n", idiom);
+    return 1;
+    
+}
+
+void get_user_char_input(char* user_in) {
+
+    printf("Choose 2 char in SELECTION: ");
+
+    int c;
+    int count = 0;
+
+    while ((c = getchar()) != '\n' && isalpha(c)) {
+        if (count < 2) {
+            user_in[count] = toupper((unsigned char)c);
+            count++;
+        } else {
+            break;
+        }
+    }
+}
+
+
+int from_to_list(int* from_list,int* to_list, char character){
+
+    int index = toupper(character) - 'A';
+    int char_num = index + 1;
+
+    if(from_list[index] == -1){
+        return 0;
+    } else {
+        from_list[index] = -1;
+        to_list[get_last_index(to_list)] = char_num;
+        return 1;
+    }
+}
+
+void to_format_idiom(const char* idiom, char* idiom2, char character){
+
+    int size = strlen(idiom2);
+
+    for (int i = 0; i < size; i++)
+    {
+        if(idiom2[i] == '_' && toupper(idiom[i]) == character){
+            idiom2[i] = character;
+        }
+    }
+
+}
+
+void formatted_idiom_init(const char* idiom, char* to_format_idiom){
+    int len = strlen(idiom);
+
+    for (int i = 0; i < len; i++)
+    {
+
+        if(isalpha(idiom[i])){
+            to_format_idiom[i] = '_';
+        } else {
+            to_format_idiom[i] = idiom[i];
+        }
+    }
+
+    to_format_idiom[len] = '\0';
+}
+
+int get_last_index(const int* list){
+    for(int i=0;i < CHAR_SET_SIZE;i++){
+        if(list[i] == 0){
+            return i;
+        }
+    }
+    return -1;
+}
+
+int get_random_num(){
+    int r = rand() % CHAR_SET_SIZE;     // random number
+    return r;
+}
+
+void start_alph_selection(int* from_list,int* to_list, int random_size){
+    int count = random_size;
+
+    // loop till all selection finished
+    while(count > 0 ){
+        int i = get_random_num();
+
+        if(from_list[i] == 0){
+            continue;
+        }
+
+        from_list[i] = -1;
+        to_list[get_last_index(to_list)] = i+1;
+
+        count--;
+    }
+}
+
+void print_list_with_alph(const int* list){
+    printf("[ ");
+    for(int i =0; i < CHAR_SET_SIZE; i++){
+
+        // if list[i] is 0, end of list
+        if(list[i] == 0){
+            break;
+        }
+
+        if(list[i] == -1){ // if list is -1, no character
+            printf("_ ");
+        } else { // else print character
+           printf("%c ",CHAR_MAP[list[i]-1]); 
+        }
+
+    }
+    printf("]\n");
+}
+
+void print_list_with_number(const int* list){
+    printf("[ ");
+    for(int i =0; i < CHAR_SET_SIZE; i++){
+        printf("%d",list[i]);
+        if(i != CHAR_SET_SIZE-1){
+            printf(" ");
+        }
+    }
+    printf(" ]\n");
+}
+
+void char_selection_list_init(int* list){
+    for(int i =0; i< CHAR_SET_SIZE; i ++){
+        list[i] = i+1;
+    }
+}
+
+// count how many lines in the file
+int count_lines(FILE *file) {
+    int count = 0;
+    int c;
+
+    while ((c = fgetc(file)) != EOF) {
+        if (c == '\n') count++;
+    }
+    rewind(file); // go back to beginning
+    return count;
+}
+
+// pick a random idiom from file and store in idiom
+void get_random_idiom(const char* filename, char* idiom, int buffer_size) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Could not open file: %s\n", filename);
+        idiom[0] = '\0';
+        return;
+    }
+
+    int total_lines = count_lines(file);
+
+    int random_line = rand() % total_lines;
+
+    char line[STR_LEN];
+    int current_line = 0;
+    while (fgets(line, sizeof(line), file) != NULL) {
+        if (current_line == random_line) {
+            // remove trailing newline
+            line[strcspn(line, "\n")] = '\0';
+            strncpy(idiom, line, buffer_size - 1);
+            idiom[buffer_size - 1] = '\0'; // ensure null-terminated
+            break;
+        }
+        current_line++;
+    }
+
+    fclose(file);
+}
+
+void clear_input_buffer(){
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+//Broadcast game,handle clients, scheduler and logging thread
 //send word to everyone
 void broadcast_game_state() {
     char msg[128];
@@ -135,6 +394,7 @@ void handle_client(int player_id) {
 }
 
 int main() {
+    srand(time(NULL)); // seed the random generator (do this ONCE)
     //shared mem
     state = mmap(NULL, sizeof(shared_state_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     
