@@ -7,12 +7,9 @@
 
 const int MIN_PLAYERS = 3;
 const int MAX_PLAYERS = 5;
-// const int STR_LEN = 255;
 #define STR_LEN 255
-// const int CHAR_SET_SIZE = 26;
 #define CHAR_SET_SIZE 26
 const int INIT_RANDOM_SIZE = 4;
-// const int USER_INPUT_SIZE = 2;
 #define USER_INPUT_SIZE 2
 const char CHAR_MAP[26] =   {
                                 'A','B','C','D','E','F','G','H','I','J','K','L','M',
@@ -409,7 +406,6 @@ void start_alph_selection(int* from_list,int* to_list, int random_size){
 void print_list_with_alph(const int* list){
     printf("[ ");
     for(int i =0; i < CHAR_SET_SIZE; i++){
-
         // if list[i] is 0, end of list
         if(list[i] == 0){
             break;
@@ -489,36 +485,36 @@ void clear_input_buffer(){
 }
 
 // get players' name
-void get_player_name(Player players[], int player_count){
-    for(int i=0; i<player_count; i++){
-        printf("Key in player %d's name: ", i+1);
-        fgets(players[i].name,sizeof(players[i].name),stdin);
-        players[i].name[strcspn(players[i].name, "\n")] = '\0';
-    }
-}
+// void get_player_name(Player players[], int player_count){
+//     for(int i=0; i<player_count; i++){
+//         printf("Key in player %d's name: ", i+1);
+//         fgets(players[i].name,sizeof(players[i].name),stdin);
+//         players[i].name[strcspn(players[i].name, "\n")] = '\0';
+//     }
+// }
 
 // get player counts
-int get_player_count(int min, int max){
-    int count;
+// int get_player_count(int min, int max){
+//     int count;
 
-    while (1) {
-        printf("How many players? (%d-%d): ", min, max);
+//     while (1) {
+//         printf("How many players? (%d-%d): ", min, max);
 
-        if (scanf("%d", &count) != 1) {
-            printf("Invalid input. Please enter a number.\n");
-            clear_input_buffer();
-            continue;
-        }
+//         if (scanf("%d", &count) != 1) {
+//             printf("Invalid input. Please enter a number.\n");
+//             clear_input_buffer();
+//             continue;
+//         }
 
-        if (count >= min && count <= max) {
-            break;
-        }
+//         if (count >= min && count <= max) {
+//             break;
+//         }
 
-        printf("Number out of range. Try again.\n");
-        clear_input_buffer();
-    }
+//         printf("Number out of range. Try again.\n");
+//         clear_input_buffer();
+//     }
 
-    clear_input_buffer();
-    return count;
+//     clear_input_buffer();
+//     return count;
 
-}
+// }
