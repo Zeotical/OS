@@ -37,6 +37,11 @@ typedef struct {
     int wrong;
     int turn_done;
     int last_guess_correct;
+    char idiom[STR_LEN];
+    char formatted_idiom[STR_LEN];
+    int char_selection_list[CHAR_SET_SIZE];
+    int char_selected_list[CHAR_SET_SIZE]; // [ E S X K .... '\0' ]
+    int idiom_char_list[CHAR_SET_SIZE]; // [ H A P Y N E W R '\0' ]
     int client_socks[MAX_PLAYERS]; 
     pthread_mutex_t mutex;
     sem_t turn_sem[MAX_PLAYERS];
@@ -405,51 +410,60 @@ void handle_client(int player_id) {
     close(sock);
 }
 
-void game_start(int player_id){
-srand(time(NULL)); // seed the random generator (do this ONCE)
-
-    char idiom[STR_LEN];
+void game_init(){
+    srand(time(NULL)); // seed the random generator (do this ONCE)
     char infile_name[] = "idioms.txt";
     //Get random idiom before game starts
-    get_random_idiom(infile_name, idiom, sizeof(idiom));
+    get_random_idiom(infile_name, state->idiom, sizeof(state->idiom));
 //TO DO print upper border after idiom
 
 // declarations
-    char formatted_idiom[STR_LEN] = ""; // Idiom = "_____ ___ ____!"
-    int char_selection_list[CHAR_SET_SIZE] = {0}; // [ A B C D _ F G H I J _ L M N O P Q R _ T U V W _ Y Z ]
-    int char_selected_list[CHAR_SET_SIZE] = {0}; // [ E S X K .... '\0' ]
-    int idiom_char_list[CHAR_SET_SIZE] = {0}; // [ H A P Y N E W R '\0' ]
+    // state->formatted_idiom[STR_LEN] = ""; // Idiom = "_____ ___ ____!"
+    // state->char_selection_list[CHAR_SET_SIZE] = {0}; // [ A B C D _ F G H I J _ L M N O P Q R _ T U V W _ Y Z ]
+    // state->char_selected_list[CHAR_SET_SIZE] = {0}; // [ E S X K .... '\0' ]
+    // state->idiom_char_list[CHAR_SET_SIZE] = {0}; // [ H A P Y N E W R '\0' ]
 
-    char_selection_list_init(char_selection_list); // [ A B C D E F ... ]
-    formatted_idiom_init(idiom, formatted_idiom); // Idiom = "_____ ___ ____!"
-    idiom_char_list_init(idiom_char_list,idiom); // "Happy New Year!" = [ H A P Y N E W R ];
+    char_selection_list_init(state->char_selection_list); // [ A B C D E F ... ]
+    formatted_idiom_init(state->idiom, state->formatted_idiom); // Idiom = "_____ ___ ____!"
+    idiom_char_list_init(state->idiom_char_list,state->idiom); // "Happy New Year!" = [ H A P Y N E W R ];
 
     int count = 0;
-    int sock = state->client_socks[player_id];
-    char buf[64];
-    char alph_list[128];
-    char format_idiom[128];
-    alph_list[0] = '\0';
+    // char buf[64];
+    // char alph_list[128];
+    // char format_idiom[128];
+    // alph_list[0] = '\0';
     while(count < INIT_RANDOM_SIZE)
     {
         // randomly select a character
         char rand_char = CHAR_MAP[get_random_num()];
         // check if successfully added to the char_selected_list
-        int added = from_to_list(char_selection_list,char_selected_list,rand_char);
+        int added = from_to_list(state->char_selection_list,state->char_selected_list,rand_char);
 
         if(!added){  //failed to add because of duplicates
             continue;
         }
 
         // settle formatted_idiom and idiom_char_list
-        int idiom_char_index = get_list_index_by_char(idiom_char_list,rand_char); 
+        int idiom_char_index = get_list_index_by_char(state->idiom_char_list,rand_char); 
         if(idiom_char_index >= 0){ // -1 = cant find, >= 0 is list's index
-            to_format_idiom(idiom,formatted_idiom, rand_char);
-            idiom_char_list_clear(idiom_char_list, idiom_char_index);
+            to_format_idiom(state->idiom,state->formatted_idiom, rand_char);
+            idiom_char_list_clear(state->idiom_char_list, idiom_char_index);
         }
 
         count++;
     }
+}
+
+
+void game_start(int player_id){
+
+    int count = 0;
+    int sock = state->client_socks[player_id];
+    char buf[64];
+    char alph_list[128];
+    char format_idiom[128];
+    char end_game_msg[128];
+    alph_list[0] = '\0';
 
     // print initialization info
     //TODO print for all
@@ -462,18 +476,18 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
     char *selection = "SELECTION: ";
     send(sock, selection, strlen(selection), 0);
     memset(alph_list, 0, sizeof(alph_list));
-    print_list_with_alph(char_selection_list, alph_list);
+    print_list_with_alph(state->char_selection_list, alph_list);
     send(sock, alph_list, strlen(alph_list), 0);
 
     //Print SELECTED
     char *selected = "\nSELECT(ED): ";
     send(sock, selected, strlen(selected), 0);
     memset(alph_list, 0, sizeof(alph_list));
-    print_list_with_alph(char_selected_list, alph_list);
+    print_list_with_alph(state->char_selected_list, alph_list);
     send(sock, alph_list, strlen(alph_list), 0);
 
     //PRINT IDIOM
-    sprintf(format_idiom, "\nIdiom: %s\n",formatted_idiom);
+    sprintf(format_idiom, "\nIdiom: %s\n",state->formatted_idiom);
     send(sock, format_idiom, strlen(format_idiom), 0);
     
     //TO DO print lower border after idiom
@@ -482,7 +496,7 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
     // winning condition 2 = all idiom's characters been selected.
     // User starts here
 
-    while(1){
+    while(!state->game_over){
 
         //TO DO print upper border after idiom
 
@@ -510,13 +524,13 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
             if(user_char_input[i] == 0){
                 break;
             }
-            from_to_list(char_selection_list,char_selected_list,user_char_input[i]);
+            from_to_list(state->char_selection_list,state->char_selected_list,user_char_input[i]);
 
             // settle formatted_idiom and idiom_char_list
-            int idiom_char_index = get_list_index_by_char(idiom_char_list,user_char_input[i]); 
+            int idiom_char_index = get_list_index_by_char(state->idiom_char_list,user_char_input[i]); 
             if(idiom_char_index >= 0){ // -1 = cant find, >= 0 is list's index
-                to_format_idiom(idiom,formatted_idiom, user_char_input[i]);
-                idiom_char_list_clear(idiom_char_list, idiom_char_index);
+                to_format_idiom(state->idiom,state->formatted_idiom, user_char_input[i]);
+                idiom_char_list_clear(state->idiom_char_list, idiom_char_index);
             }
         }
 
@@ -528,22 +542,22 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
         char *selection = "SELECTION: ";
         send(sock, selection, strlen(selection), 0);
         memset(alph_list, 0, sizeof(alph_list));
-        print_list_with_alph(char_selection_list, alph_list);
+        print_list_with_alph(state->char_selection_list, alph_list);
         send(sock, alph_list, strlen(alph_list), 0);
 
         //PRINT SELECTED
         char *selected = "\nSELECT(ED): ";
         send(sock, selected, strlen(selected), 0);
         memset(alph_list, 0, sizeof(alph_list));
-        print_list_with_alph(char_selected_list, alph_list);
+        print_list_with_alph(state->char_selected_list, alph_list);
 
         //PRINT IDIOM
         send(sock, alph_list, strlen(alph_list), 0);
-        sprintf(format_idiom, "\nIdiom: %s\n",formatted_idiom);
+        sprintf(format_idiom, "\nIdiom: %s\n",state->formatted_idiom);
         send(sock, format_idiom, strlen(format_idiom), 0);
         
 
-        if(idiom_char_list[0] == 0){
+        if(state->idiom_char_list[0] == 0){
             break;
         }
 
@@ -557,15 +571,22 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
         user_guess_input[l] = '\0';  //memcpy does not null terminate
         // remove newline
         user_guess_input[strcspn(user_guess_input, "\n")] = '\0';
-        printf("DEBUG: Received Guess: [%s] | Length: %zu\n", user_guess_input, strlen(user_guess_input));
-        int check_guess = check_guessing(idiom, user_guess_input);
+        printf("DEBUG: Comparing Guess [%s] against Idiom [%s]\n", user_guess_input, state->idiom);
+        int check_guess = check_guessing(state->idiom, user_guess_input);
         if(check_guess == 1){
+            state->game_over = 1;
+             user_char_input[0] = 0;
+        user_char_input[1] = 0;
+        user_guess_input[0] = '\0';
+
+        //TO DO lower border
+
+        state->turn_done = 1;          
+        sem_post(state->logging_sem); // signal to logger that player finished
+        pthread_mutex_unlock(&state->mutex);
             break;
         }
-        else{
-            state->game_over = 1;
-        }
-
+       
         user_char_input[0] = 0;
         user_char_input[1] = 0;
         user_guess_input[0] = '\0';
@@ -576,7 +597,6 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
         sem_post(state->logging_sem); // signal to logger that player finished
         pthread_mutex_unlock(&state->mutex);
     }
-
     //TO DO print WINNING info
     // printBorder(1);
     // printTitle();
@@ -584,7 +604,10 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
     // printf("*** Game Finish ***\n\n");
     // printf("Hidden Idiom: %s\n",idiom); // (temp)
     // printBorder(0);
-    send(sock, "\nGAME OVER! The word was apple.\n", 32, 0);
+    //printBorder(1);
+    sprintf(end_game_msg, "\nGame Over! You Win! The Idiom was: %s\n",state->idiom);
+   // printBorder(0);
+    send(sock, end_game_msg, strlen(end_game_msg), 0);
     close(sock);
     // (END) GAME SYSTEM
 }
@@ -633,6 +656,7 @@ int main() {
     }
 
     //start
+    game_init();
     pthread_t sched;
     pthread_t logger;
     pthread_create(&sched, NULL, scheduler_thread, NULL);
