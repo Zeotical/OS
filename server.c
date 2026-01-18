@@ -11,7 +11,7 @@
 #include <semaphore.h>
 
 #define PORT 5555
-#define MAX_PLAYERS 3
+#define MAX_PLAYERS 2
 #define WORD "apple"
 
 typedef struct {
@@ -25,6 +25,7 @@ typedef struct {
     int client_socks[MAX_PLAYERS]; 
     pthread_mutex_t mutex;
     sem_t turn_sem[MAX_PLAYERS];
+    sem_t logging_sem[MAX_PLAYERS];
 } shared_state_t;
 
 shared_state_t *state;
@@ -38,6 +39,24 @@ void broadcast_game_state() {
             send(state->client_socks[i], msg, strlen(msg), 0);
         }
     }
+}
+
+void *logging_thread(void *arg) {
+    //wait for players to be ready
+    // sleep(1); 
+    FILE *fptr;
+    char msg[128];
+    char player_no[128];
+    //Create the logging file
+    fptr = fopen("game.log", "w");
+    while (!state->game_over) {
+        sem_wait(state->logging_sem); // wait until player finishes entering their choice
+        sprintf(player_no, "\n---- Player no: %d's Move ----\n",state->current_turn+1);
+        fprintf(fptr, player_no);
+        sprintf(msg, "\n--- Update ---\nWord: %s\nWrong: %d\n--------------\n", state->revealed, state->wrong);
+        fprintf(fptr, msg);
+    }
+    return NULL;
 }
 
 void *scheduler_thread(void *arg) {
@@ -106,7 +125,8 @@ void handle_client(int player_id) {
         // Update all terminals
         broadcast_game_state();
 
-        state->turn_done = 1;
+        state->turn_done = 1;          
+        sem_post(state->logging_sem); // signal to logger that player finished
         pthread_mutex_unlock(&state->mutex);
     }
 
@@ -134,6 +154,7 @@ int main() {
     for (int i = 0; i < MAX_PLAYERS; i++) {
         sem_init(&state->turn_sem[i], 1, 0);
     }
+        sem_init(state->logging_sem, 1, 0);
 
     //network stuff
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -153,12 +174,14 @@ int main() {
     //accept before forking
     for (int i = 0; i < MAX_PLAYERS; i++) {
         state->client_socks[i] = accept(server_fd, NULL, NULL);
-        printf("Player %d joined (Socket: %d)\n", i, state->client_socks[i]);
+        printf("Player %d joined (Socket: %d)\n", i+1, state->client_socks[i]);
     }
 
     //start
     pthread_t sched;
+    pthread_t logger;
     pthread_create(&sched, NULL, scheduler_thread, NULL);
+    pthread_create(&logger, NULL, logging_thread, NULL);
 
     //fork
     for (int i = 0; i < MAX_PLAYERS; i++) {
