@@ -74,7 +74,7 @@ int main() {
 
         printf("%s", buffer);
 
-        if (strstr(buffer, "Guess")) {
+        if (strstr(buffer, "Choose") || strstr(buffer, "guess") ) {
             fgets(buffer, BUF_SIZE, stdin);
             write(sock, buffer, strlen(buffer));
         }
