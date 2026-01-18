@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <semaphore.h>
 
-#include <ctype.h>
+#include <ctype.h> //toupper
 #include <time.h> //rand() amd seed()
 
 #define PORT 5555
@@ -116,7 +116,7 @@ void printBorder(int upper){
 int check_guessing(const char* idiom, const char* user_guess){
     for (int i = 0; i < strlen(idiom); i++)
     {
-        if(toupper(idiom[i]) != toupper(user_guess[i])){
+        if(toupper((unsigned char)idiom[i]) != toupper((unsigned char)user_guess[i])){
             return 0;
         }
     }
@@ -217,12 +217,8 @@ void print_list_with_alph(const int* list, char* alphList ){
     strcat(alphList, "[");
     for(int i =0; i < CHAR_SET_SIZE; i++){
 
-            printf("DEBUG: Index %d has value %d\n", i, list[i]);
-
         // if list[i] is 0, end of list
         if(list[i] == 0){
-                    printf("DEBUG: Found 0, breaking loop!\n");
-
             break;
         }
 
@@ -491,7 +487,7 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
         //TO DO print upper border after idiom
 
         char user_char_input[USER_INPUT_SIZE] = {0};
-        char user_guess_input[STR_LEN];
+        char user_guess_input[STR_LEN] = {0};
         
         // get user char input
         sem_wait(&state->turn_sem[player_id]);
@@ -552,16 +548,22 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
         }
 
         //prompt of get user guess
-        char *guess_prompt = "Make the guess: \n";
-        send(sock, prompt, strlen(prompt), 0);
-        fgets(user_guess_input, sizeof(user_guess_input),stdin);
+        char *guess_prompt = "Make a guess: \n";
+        send(sock, guess_prompt, strlen(guess_prompt), 0);
+        memset(buf, 0, sizeof(buf));
+        int l = read(sock, buf, sizeof(buf));
+        if (l <= 0) break;
+        memcpy(user_guess_input, buf, l);  //user_char_input = what the user inputted in buffer (expected 2 chars)
+        user_guess_input[l] = '\0';  //memcpy does not null terminate
         // remove newline
         user_guess_input[strcspn(user_guess_input, "\n")] = '\0';
-        
-
+        printf("DEBUG: Received Guess: [%s] | Length: %zu\n", user_guess_input, strlen(user_guess_input));
         int check_guess = check_guessing(idiom, user_guess_input);
         if(check_guess == 1){
             break;
+        }
+        else{
+            state->game_over = 1;
         }
 
         user_char_input[0] = 0;
@@ -587,20 +589,6 @@ srand(time(NULL)); // seed the random generator (do this ONCE)
     // (END) GAME SYSTEM
 }
 int main() {
-//     srand(time(NULL)); // seed the random generator (do this ONCE)
-
-//     char idiom[STR_LEN];
-//     char infile_name[] = "idioms.txt";
-//     //Get random idiom before game starts
-//     get_random_idiom(infile_name, idiom, sizeof(idiom));
-// //TO DO print border after idiom
-
-// // declarations
-//     char formatted_idiom[STR_LEN] = ""; // Idiom = "_____ ___ ____!"
-//     int char_selection_list[CHAR_SET_SIZE] = {0}; // [ A B C D _ F G H I J _ L M N O P Q R _ T U V W _ Y Z ]
-//     int char_selected_list[CHAR_SET_SIZE] = {0}; // [ E S X K .... '\0' ]
-//     int idiom_char_list[CHAR_SET_SIZE] = {0}; // [ H A P Y N E W R '\0' ]
-
 
     //shared mem
     state = mmap(NULL, sizeof(shared_state_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
