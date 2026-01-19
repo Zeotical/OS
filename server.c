@@ -470,6 +470,30 @@ void game_init(){
     }
 }
 
+void print_info(int sock, char* alph_list, char* format_idiom){
+
+    // print initialization info
+        char *loop = "***Current Game State***\n\n";
+        send(sock, loop, strlen(loop), 0);
+
+        //PRINT SELECTION
+        char *selection = "SELECTION: ";
+        send(sock, selection, strlen(selection), 0);
+        memset(alph_list, 0, sizeof(alph_list));
+        print_list_with_alph(state->char_selection_list, alph_list);
+        send(sock, alph_list, strlen(alph_list), 0);
+
+        //PRINT SELECTED
+        char *selected = "\nSELECT(ED): ";
+        send(sock, selected, strlen(selected), 0);
+        memset(alph_list, 0, sizeof(alph_list));
+        print_list_with_alph(state->char_selected_list, alph_list);
+
+        //PRINT IDIOM
+        send(sock, alph_list, strlen(alph_list), 0);
+        sprintf(format_idiom, "\nIdiom: %s\n",state->formatted_idiom);
+        send(sock, format_idiom, strlen(format_idiom), 0);
+}
 
 void game_start(int player_id){
 
@@ -483,26 +507,8 @@ void game_start(int player_id){
     // print initialization info
     //TODO print for all
     //Print Initiation
-    char *init = "*** Initiation ***\n\n";
-    send(sock, init, strlen(init), 0);
 
-    //PRINT SELECTION
-    char *selection = "SELECTION: ";
-    send(sock, selection, strlen(selection), 0);
-    memset(alph_list, 0, sizeof(alph_list));
-    print_list_with_alph(state->char_selection_list, alph_list);
-    send(sock, alph_list, strlen(alph_list), 0);
-
-    //Print SELECTED
-    char *selected = "\nSELECT(ED): ";
-    send(sock, selected, strlen(selected), 0);
-    memset(alph_list, 0, sizeof(alph_list));
-    print_list_with_alph(state->char_selected_list, alph_list);
-    send(sock, alph_list, strlen(alph_list), 0);
-
-    //PRINT IDIOM
-    sprintf(format_idiom, "\nIdiom: %s\n",state->formatted_idiom);
-    send(sock, format_idiom, strlen(format_idiom), 0);
+    print_info(sock, alph_list, format_idiom);
     
     //TO DO print lower border after idiom
     
@@ -521,6 +527,8 @@ void game_start(int player_id){
         sem_wait(&state->turn_sem[player_id]);
             if (state->game_over) break;
 
+            // print initialization info
+                print_info(sock, alph_list, format_idiom);
             //active player prompt
             char *prompt = "\n*** YOUR TURN ***\nChoose 2 characters from SELECTION: ";
             // Tell other players whose turn it is
@@ -534,7 +542,6 @@ void game_start(int player_id){
             user_char_input[n] = '\0';  //memcpy does not null terminate
             get_user_char_input(user_char_input);
             pthread_mutex_lock(&state->mutex);
-            //broadcast_game_state(prompt);
 
         // list processing && format idiom
         for(int i=0; i< USER_INPUT_SIZE;i++){
