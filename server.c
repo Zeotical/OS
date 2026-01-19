@@ -580,9 +580,22 @@ void game_start(int player_id){
         sprintf(format_idiom, "\nIdiom: %s\n",state->formatted_idiom);
         send(sock, format_idiom, strlen(format_idiom), 0);
         
-
+        //1st Winning Case All letters In Idiom Selected
         if(state->idiom_char_list[0] == 0){
-            break;
+        //Send msg to other players to let them know who won
+        char* end_game_msg = "Win" ;
+        broadcast_game_state(end_game_msg);
+        state->game_over = 1;
+        user_char_input[0] = 0;
+        user_char_input[1] = 0;
+        user_guess_input[0] = '\0';
+
+        //TO DO lower border
+
+        state->turn_done = 1;          
+        sem_post(state->logging_sem); // signal to logger that player finished
+        pthread_mutex_unlock(&state->mutex);
+        break;
         }
 
         //prompt of get user guess
@@ -598,6 +611,8 @@ void game_start(int player_id){
         //TODO remove this
         printf("DEBUG: Comparing Guess [%s] against Idiom [%s]\n", user_guess_input, state->idiom);
         int check_guess = check_guessing(state->idiom, user_guess_input);
+
+        //2nd Winning Case Player guessed the word
         if(check_guess == 1){
 
         // //Send msg to other players to let them know who won
