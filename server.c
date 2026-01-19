@@ -14,8 +14,7 @@
 #include <time.h> //rand() amd seed()
 
 #define PORT 5555
-//#define MAX_PLAYERS 2
-#define WORD "apple"
+// #define WORD "apple"
 
 //Game global constraints
 //const int MIN_PLAYERS = 3;
@@ -307,14 +306,34 @@ void clear_input_buffer(){
 
 //Broadcast game,handle clients, scheduler and logging thread
 //send word to everyone
-void broadcast_game_state() {
+void broadcast_game_state(char* msg_type) {
     char msg[128];
-    sprintf(msg, "\n--- Update ---\nWord: %s\nWrong: %d\n--------------\n", state->revealed, state->wrong);
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (state->client_socks[i] > 0) {
-            send(state->client_socks[i], msg, strlen(msg), 0);
-        }
+    //if msg waiting for player to finish their turn
+    if(strstr(msg_type, "Choose")) {
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (state->client_socks[i] > 0 && state->current_turn != i ) {
+                    sprintf(msg, "\n----Please wait while Player no %d's makes their move. ----\n",state->current_turn+1);
+                    send(state->client_socks[i], msg, strlen(msg), 0);
+                }
     }
+    }
+// Tell other players who won
+    if(strstr(msg_type, "Win")) {
+        for (int i = 0; i < MAX_PLAYERS; i++) {
+ 
+            if (state->client_socks[i] > 0 &&state->current_turn != i ) {
+                sprintf(msg, "\n----Game Over! Player no %d won! The Idiom was: %s ----\n",state->current_turn+1, state->idiom);
+                send(state->client_socks[i], msg, strlen(msg), 0);
+                memset(msg, 0, sizeof(msg));
+            }
+            else {
+            sprintf(msg, "\nGame Over! You Win! The Idiom was: %s\n",state->idiom);
+            send(state->client_socks[i], msg, strlen(msg), 0);
+            memset(msg, 0, sizeof(msg));
+            }
+    }
+    }
+
 }
 
 void *logging_thread(void *arg) {
@@ -362,53 +381,53 @@ void *scheduler_thread(void *arg) {
     return NULL;
 }
 
-void handle_client(int player_id) {
-    int sock = state->client_socks[player_id];
-    char buf[64];
+// void handle_client(int player_id) {
+//     int sock = state->client_socks[player_id];
+//     char buf[64];
 
-    while (!state->game_over) {
-        sem_wait(&state->turn_sem[player_id]);
-        if (state->game_over) break;
+//     while (!state->game_over) {
+//         sem_wait(&state->turn_sem[player_id]);
+//         if (state->game_over) break;
 
-        //active player prompt
-        char *prompt = "\n*** YOUR TURN ***\nGuess a letter: ";
-        send(sock, prompt, strlen(prompt), 0);
+//         //active player prompt
+//         char *prompt = "\n*** YOUR TURN ***\nGuess a letter: ";
+//         send(sock, prompt, strlen(prompt), 0);
 
-        memset(buf, 0, sizeof(buf));
-        int n = read(sock, buf, sizeof(buf));
-        if (n <= 0) break;
+//         memset(buf, 0, sizeof(buf));
+//         int n = read(sock, buf, sizeof(buf));
+//         if (n <= 0) break;
 
-        char guess = buf[0];
-        pthread_mutex_lock(&state->mutex);
+//         char guess = buf[0];
+//         pthread_mutex_lock(&state->mutex);
         
-        int found = 0;
-        for (int i = 0; WORD[i]; i++) {
-            if (WORD[i] == guess) {
-                state->revealed[i] = guess;
-                found = 1;
-            }
-        }
+//         int found = 0;
+//         for (int i = 0; WORD[i]; i++) {
+//             if (WORD[i] == guess) {
+//                 state->revealed[i] = guess;
+//                 found = 1;
+//             }
+//         }
 
-        if (!found) {
-            state->wrong++;
-            state->last_guess_correct = 0;
-        } else {
-            state->last_guess_correct = 1;
-        }
+//         if (!found) {
+//             state->wrong++;
+//             state->last_guess_correct = 0;
+//         } else {
+//             state->last_guess_correct = 1;
+//         }
 
-        if (strcmp(state->revealed, WORD) == 0) state->game_over = 1;
+//         if (strcmp(state->revealed, WORD) == 0) state->game_over = 1;
 
-        // Update all terminals
-        broadcast_game_state();
+//         // Update all terminals
+//         // broadcast_game_state();
 
-        state->turn_done = 1;          
-        sem_post(state->logging_sem); // signal to logger that player finished
-        pthread_mutex_unlock(&state->mutex);
-    }
+//         state->turn_done = 1;          
+//         sem_post(state->logging_sem); // signal to logger that player finished
+//         pthread_mutex_unlock(&state->mutex);
+//     }
 
-    send(sock, "\nGAME OVER! The word was apple.\n", 32, 0);
-    close(sock);
-}
+//     send(sock, "\nGAME OVER! The word was apple.\n", 32, 0);
+//     close(sock);
+// }
 
 void game_init(){
     srand(time(NULL)); // seed the random generator (do this ONCE)
@@ -428,10 +447,7 @@ void game_init(){
     idiom_char_list_init(state->idiom_char_list,state->idiom); // "Happy New Year!" = [ H A P Y N E W R ];
 
     int count = 0;
-    // char buf[64];
-    // char alph_list[128];
-    // char format_idiom[128];
-    // alph_list[0] = '\0';
+    
     while(count < INIT_RANDOM_SIZE)
     {
         // randomly select a character
@@ -462,7 +478,6 @@ void game_start(int player_id){
     char buf[64];
     char alph_list[128];
     char format_idiom[128];
-    char end_game_msg[128];
     alph_list[0] = '\0';
 
     // print initialization info
@@ -470,7 +485,6 @@ void game_start(int player_id){
     //Print Initiation
     char *init = "*** Initiation ***\n\n";
     send(sock, init, strlen(init), 0);
-    //memset(alph_list, 0, sizeof());
 
     //PRINT SELECTION
     char *selection = "SELECTION: ";
@@ -509,6 +523,8 @@ void game_start(int player_id){
 
             //active player prompt
             char *prompt = "\n*** YOUR TURN ***\nChoose 2 characters from SELECTION: ";
+            // Tell other players whose turn it is
+            broadcast_game_state(prompt);
             send(sock, prompt, strlen(prompt), 0);
             memset(buf, 0, sizeof(buf));
             int n = read(sock, buf, sizeof(buf));
@@ -518,6 +534,7 @@ void game_start(int player_id){
             user_char_input[n] = '\0';  //memcpy does not null terminate
             get_user_char_input(user_char_input);
             pthread_mutex_lock(&state->mutex);
+            //broadcast_game_state(prompt);
 
         // list processing && format idiom
         for(int i=0; i< USER_INPUT_SIZE;i++){
@@ -571,11 +588,16 @@ void game_start(int player_id){
         user_guess_input[l] = '\0';  //memcpy does not null terminate
         // remove newline
         user_guess_input[strcspn(user_guess_input, "\n")] = '\0';
+        //TODO remove this
         printf("DEBUG: Comparing Guess [%s] against Idiom [%s]\n", user_guess_input, state->idiom);
         int check_guess = check_guessing(state->idiom, user_guess_input);
         if(check_guess == 1){
-            state->game_over = 1;
-             user_char_input[0] = 0;
+
+        // //Send msg to other players to let them know who won
+        char* end_game_msg = "Win" ;
+        broadcast_game_state(end_game_msg);
+        state->game_over = 1;
+        user_char_input[0] = 0;
         user_char_input[1] = 0;
         user_guess_input[0] = '\0';
 
@@ -598,16 +620,6 @@ void game_start(int player_id){
         pthread_mutex_unlock(&state->mutex);
     }
     //TO DO print WINNING info
-    // printBorder(1);
-    // printTitle();
-    // printf("\n\n");
-    // printf("*** Game Finish ***\n\n");
-    // printf("Hidden Idiom: %s\n",idiom); // (temp)
-    // printBorder(0);
-    //printBorder(1);
-    sprintf(end_game_msg, "\nGame Over! You Win! The Idiom was: %s\n",state->idiom);
-   // printBorder(0);
-    send(sock, end_game_msg, strlen(end_game_msg), 0);
     close(sock);
     // (END) GAME SYSTEM
 }
