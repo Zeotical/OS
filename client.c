@@ -9,36 +9,34 @@
 #define BUF_SIZE 2048
 
 void printBorder(int upper){
+    const char* border = "============================================================";
     if(upper){
-        printf("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n");
+        printf("\n%s\n\n", border);
     } else {
-        printf("\n*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n");
+        printf("\n%s\n", border);
     }
 }
 
 void printTitle(){
-    printf("  ▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂\n");
-    printf(" ▞ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ▚\n");
-    printf("▞ * * ▚\n");
-    printf("▌* ▐▌    ▐▌ █  █ █▐▌▌ █▐▌▌ █         ▐▐███▌▌ █  █ █▐▌▌      █▐▌▌   █▐   █▐▌▌  ▐▐███▌▌ █  ▐▌▌ ▐▌  ▐▌ █▐▌▌   * ▌\n");
-    printf("▌* ▐▌ █  ▐▌ █▗▖█ █▗▖  █▗▖  █            ▄    █▗▖█ █▗▖       █▗▖  █    █ █   █    ▄    █  ▐▌▌ ▐▌█ ▐▌ █▗▖    * ▌\n");
-    printf("▌* ▐▌ █  ▐▌ █▝▘█ █▝▘  █▝▘  █            █    █▝▘█ █▝▘       █▝▘  █    █ █▐▌▌     █    █  ▐▌▌ ▐▌ █▐▌ █▝▘    * ▌\n");
-    printf("▌* ▐▌ ▐▌▌  █  █ █▐▌▌ █▐▌▌ █▐▌▌         █    █  █ █▐▌▌      █      █▐   █   █    █     ███   ▐▌  ▐▌ █▐▌▌   * ▌\n");
-    printf("▚ * * ▞                                        \n");
-    printf(" ▚ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ▞\n");
-    printf("  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n");
+    printf(" __      __  _                  _   \n");
+    printf(" \\ \\    / / | |                | |  \n");
+    printf("  \\ \\/\\/ /__| |__   ___ ___ ___| |  \n");
+    printf("   \\    / _ \\ '_ \\ / _ \\/ _ \\/ _ \\ |  \n");
+    printf("    \\  /  __/ | | |  __/  __/  __/ |  \n");
+    printf("     \\/ \\___|_| |_|\\___|\\___|\\___|_|  \n");
+    printf("                                      \n");
+    printf("         O F   F O R T U N E          \n");
 }
 
 void printOpening(){
+    
     printBorder(1);
-    printf("\n");
-    printf("                               ▐▌    ▐▌ █▐▌▌ █    █▐▌▌   █▐    ▐▌ ▐▌▌  █▐▌▌  ▐▌    \n");
-    printf("                               ▐▌ █  ▐▌ █▗▖  █    █    █    █ ▐▌ █  ▐▌ █▗▖   ▐▌    \n");
-    printf("                               ▐▌ █  ▐▌ █▝▘  █    █    █    █ ▐▌ █  ▐▌ █▝▘   ▝▘    \n");
-    printf("                                ▐▌ ▐▌▌  █▐▌▌ █▐▌▌ █▐▌▌   █▐   ▐▌    ▐▌ █▐▌▌  ▗▖    \n");
     printTitle();
-    printf("\n");
+    printf("\n       Welcome to the Multiplayer C Edition!\n");
     printBorder(0);
+    
+    //force text
+    fflush(stdout); 
 }
 
 int main() {
@@ -61,6 +59,7 @@ int main() {
 
     if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("connect");
+        printf("ERROR: Could not connect. Is the server running?\n");
         exit(1);
     }
 
@@ -73,25 +72,26 @@ int main() {
         FD_SET(STDIN_FILENO, &read_fds);
         max_sd = sock;
 
-        //wait for activity on socket
+        //wait for activity
         int activity = select(max_sd + 1, &read_fds, NULL, NULL, NULL);
 
         if ((activity < 0) && (activity != 0)) {
             printf("select error");
         }
 
-        //check data comes from server
+        //data from Server
         if (FD_ISSET(sock, &read_fds)) {
             memset(buffer, 0, BUF_SIZE);
             int n = read(sock, buffer, BUF_SIZE - 1);
             if (n <= 0) {
-                printf("Server disconnected.\n");
+                printf("\nServer disconnected.\n");
                 break;
             }
-            //print what server sent(clears screen also using ansi)
+            
             printf("%s", buffer);
-            fflush(stdout);
+            fflush(stdout); //force text to screen
 
+            //check if we need to show a prompt
             if (strstr(buffer, "Enter your name:") || 
                 strstr(buffer, "Choose") || 
                 strstr(buffer, "guess") ||
@@ -101,7 +101,7 @@ int main() {
             }
         }
 
-        //check if user typed something
+        //data from user
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             memset(input, 0, BUF_SIZE);
             if (fgets(input, BUF_SIZE, stdin) != NULL) {
