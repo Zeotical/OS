@@ -671,7 +671,7 @@ int main(int argc, char **argv) {
             num = 0; //ensure loop continues
         }
     }
-
+//one
     state = mmap(NULL, sizeof(shared_state_t), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
     
     pthread_mutexattr_t attr;
@@ -695,6 +695,7 @@ int main(int argc, char **argv) {
     pthread_create(&logger_tid, NULL, logger_thread_func, NULL);
     
     //bind logic for error check
+    // two
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
     int opt = 1;
     setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -710,6 +711,7 @@ int main(int argc, char **argv) {
     
     load_random_idiom(state->idiom);
     
+    
     for(int i=0; i<26; i++) state->char_selection_list[i] = i+1;
     for(int i=0; state->idiom[i]; i++) {
         state->formatted_idiom[i] = isalpha(state->idiom[i]) ? '_' : state->idiom[i];
@@ -720,6 +722,7 @@ int main(int argc, char **argv) {
     load_scores();
     reveal_starting_letters();
 
+    //three
     for (int i = 0; i < num; i++) {
         state->client_socks[i] = accept(sfd, NULL, NULL);
         log_event("Connection received for Player %d", i+1);
@@ -727,6 +730,7 @@ int main(int argc, char **argv) {
 
     pthread_create(&sched_tid, NULL, scheduler_thread, NULL);
 
+    //four
     for (int i = 0; i < num; i++) {
         if (fork() == 0) {
             game_start(i);
